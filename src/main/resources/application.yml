@@ -1,0 +1,123 @@
+domuspacis:
+  founding-year: 2026
+
+spring:
+  application:
+    name: domuspacis-platform
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/domuspacis?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:domuspacis}
+    password: ${DB_PASSWORD:domuspacis}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        type:
+          preferred_uuid_jdbc_type: CHAR
+          format_sql: true
+        format_sql: true
+        use_sql_comments: true
+        jdbc:
+          batch_size: 25
+        order_inserts: true
+        order_updates: true
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: anahafasha@gmail.com
+    password: uzzs ofwc vxor lyts
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    default-property-inclusion: non_null
+
+server:
+  port: 8080
+  error:
+    include-message: always
+    include-binding-errors: always
+
+jwt:
+  secret: ${JWT_SECRET:domuspacis-catholic-archdiocese-kigali-super-secret-key-2025}
+  expiration: 86400000
+  refresh-expiration: 604800000
+
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:http://localhost:3000,http://localhost:3001}
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: alpha
+    tagsSorter: alpha
+  info:
+    title: Domus Pacis Platform API
+    description: Enterprise hospitality platform for the Catholic Archdiocese of Kigali
+    version: 1.0.0
+    contact:
+      name: Domus Pacis IT Team
+      email: it@domuspacis.org
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+
+aop:
+  performance:
+    warn-threshold-ms: 500
+    critical-threshold-ms: 2000
+
+logging:
+  level:
+    com.domuspacis: DEBUG
+    org.springframework.security: INFO
+    org.hibernate.SQL: DEBUG
+    org.hibernate.type.descriptor.sql: TRACE
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  jpa:
+    show-sql: false
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME:domuspacis}?useSSL=true&serverTimezone=UTC
+
+logging:
+  level:
+    com.domuspacis: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
