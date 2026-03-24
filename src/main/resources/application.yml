@@ -34,13 +34,21 @@ server:
 # STOPS THE LOG FLOODING
 logging:
   level:
-    root: INFO
-    com.domuspacis: DEBUG           # See exactly what your service is doing
-    org.springframework.beans: DEBUG # Watch the "Injection" process step-by-step
-    org.springframework.boot: INFO
-    org.hibernate.SQL: DEBUG         # See the actual queries being sent
-    org.hibernate.type.descriptor.sql: TRACE # See the parameters in those queries
+    root: WARN                          # Only warnings/errors from everything else
 
+    # Your app - see info + all errors
+    com.domuspacis: INFO
+
+    # Spring - only errors (startup failures, bean issues)
+    org.springframework: ERROR
+    org.springframework.web: WARN       # Promotes 404s and bad requests to visible
+
+    # Database - only errors (connection failures, query errors)
+    org.hibernate: ERROR
+    com.zaxxer.hikari: WARN             # Show pool warnings (exhaustion, timeouts)
+
+    # Security - show auth failures
+    org.springframework.security: WARN
 jwt:
   secret: ${JWT_SECRET}
   expiration: 86400000
