@@ -14,9 +14,6 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.MySQL8Dialect
 
   mail:
     host: smtp.gmail.com
