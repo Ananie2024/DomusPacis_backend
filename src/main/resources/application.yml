@@ -5,7 +5,7 @@ spring:
   datasource:
     # This line looks for Railway variables (MYSQLHOST) first.
     # If missing, it uses localhost for your local machine.
-    url: jdbc:mysql://${MYSQLHOST:localhost}:${MYSQLPORT:3306}/${MYSQLDATABASE:domuspacis}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${MYSQLHOST:localhost}:${MYSQLPORT:3306}/${MYSQLDATABASE:domuspacis}?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: ${MYSQLUSER:root}
     password: ${MYSQLPASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
