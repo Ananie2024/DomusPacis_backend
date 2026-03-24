@@ -1,20 +1,14 @@
-domuspacis:
-  founding-year: 2026
-
 spring:
   application:
     name: domuspacis-platform
 
-  # GLOBAL DEFAULTS (Safe for Local Dev)
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:domuspacis}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: ${DB_USERNAME:root}
-    password: ${DB_PASSWORD:ananie@11072}
+    # This line looks for Railway variables (MYSQLHOST) first.
+    # If missing, it uses localhost for your local machine.
+    url: jdbc:mysql://${MYSQLHOST:localhost}:${MYSQLPORT:3306}/${MYSQLDATABASE:domuspacis}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${MYSQLUSER:root}
+    password: ${MYSQLPASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      connection-timeout: 30000
 
   jpa:
     hibernate:
@@ -23,43 +17,35 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
-        type:
-          preferred_uuid_jdbc_type: CHAR
 
-  server:
-    port: ${PORT:8080} # Essential for Railway
-    error:
-      include-message: always
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
-  # Default Logging (Prevents log flooding)
-  logging:
-    level:
-      root: INFO
-      com.domuspacis: INFO
-      org.springframework.security: INFO
+server:
+  # Crucial for Railway to bind the port
+  port: ${PORT:8080}
 
-# =========================
-# 🚀 RAILWAY / PRODUCTION PROFILE
-# =========================
----
-spring:
-  config:
-    activate:
-      on-profile: prod
+# STOPS THE LOG FLOODING
+logging:
+  level:
+    root: INFO
+    com.domuspacis: INFO
+    org.springframework: WARN
+    org.hibernate.SQL: WARN
 
-  datasource:
-    # Maps directly to Railway's automatic MySQL variables
-    url: jdbc:mysql://${MYSQLHOST}:${MYSQLPORT}/${MYSQLDATABASE}?useSSL=false&serverTimezone=UTC
-    username: ${domuspacis}
-    password: ${ananie@11072}
+jwt:
+  secret: ${JWT_SECRET}
+  expiration: 86400000
 
-  jpa:
-    hibernate:
-      ddl-auto: none # Safer for production; use 'update' only if you are sure
-    show-sql: false
-
-  logging:
-    level:
-      root: WARN
-      com.domuspacis: INFO
-      org.springframework.web: WARN
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:*}
