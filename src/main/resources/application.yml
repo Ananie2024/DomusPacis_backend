@@ -49,6 +49,9 @@ logging:
 
     # Security - show auth failures
     org.springframework.security: WARN
+    org.apache.catalina: WARN
+    org.apache.tomcat: WARN
+
 jwt:
   secret: ${JWT_SECRET}
   expiration: 86400000
