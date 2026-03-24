@@ -35,9 +35,11 @@ server:
 logging:
   level:
     root: INFO
-    com.domuspacis: INFO
-    org.springframework: WARN
-    org.hibernate.SQL: WARN
+    com.domuspacis: DEBUG           # See exactly what your service is doing
+    org.springframework.beans: DEBUG # Watch the "Injection" process step-by-step
+    org.springframework.boot: INFO
+    org.hibernate.SQL: DEBUG         # See the actual queries being sent
+    org.hibernate.type.descriptor.sql: TRACE # See the parameters in those queries
 
 jwt:
   secret: ${JWT_SECRET}
