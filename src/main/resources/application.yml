@@ -5,18 +5,16 @@ spring:
   application:
     name: domuspacis-platform
 
+  # GLOBAL DEFAULTS (Safe for Local Dev)
   datasource:
-    # DEV (local)
-    url: jdbc:mysql://localhost:3306/domuspacis?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:domuspacis}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:ananie@11072}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 20
-      minimum-idle: 5
+      maximum-pool-size: 10
+      minimum-idle: 2
       connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
 
   jpa:
     hibernate:
@@ -27,84 +25,21 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
         type:
           preferred_uuid_jdbc_type: CHAR
-        format_sql: true
-        use_sql_comments: true
-        jdbc:
-          batch_size: 25
-        order_inserts: true
-        order_updates: true
 
-  mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
+  server:
+    port: ${PORT:8080} # Essential for Railway
+    error:
+      include-message: always
 
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
-    deserialization:
-      fail-on-unknown-properties: false
-    default-property-inclusion: non_null
-
-server:
-  port: ${PORT:8080}
-  error:
-    include-message: always
-    include-binding-errors: always
-
-jwt:
-  secret: ${JWT_SECRET}
-  expiration: 86400000
-  refresh-expiration: 604800000
-
-app:
-  cors:
-    allowed-origins: ${CORS_ORIGINS}
-
-springdoc:
-  api-docs:
-    path: /api-docs
-  swagger-ui:
-    path: /swagger-ui.html
-    operationsSorter: alpha
-    tagsSorter: alpha
-  info:
-    title: Domus Pacis Platform API
-    description: Enterprise hospitality platform for the Catholic Archdiocese of Kigali
-    version: 1.0.0
-    contact:
-      name: Ananie2024
-      email: anahafasha@gmail.com
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics,prometheus
-  endpoint:
-    health:
-      show-details: always
-
-aop:
-  performance:
-    warn-threshold-ms: 500
-    critical-threshold-ms: 2000
-
-logging:
-  level:
-    com.domuspacis: DEBUG
-    org.springframework.security: INFO
-    org.hibernate.SQL: DEBUG
+  # Default Logging (Prevents log flooding)
+  logging:
+    level:
+      root: INFO
+      com.domuspacis: INFO
+      org.springframework.security: INFO
 
 # =========================
-# 🚀 PRODUCTION PROFILE
+# 🚀 RAILWAY / PRODUCTION PROFILE
 # =========================
 ---
 spring:
@@ -113,15 +48,18 @@ spring:
       on-profile: prod
 
   datasource:
-    url: jdbc:mysql://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}?useSSL=true&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    # Maps directly to Railway's automatic MySQL variables
+    url: jdbc:mysql://${MYSQLHOST}:${MYSQLPORT}/${MYSQLDATABASE}?useSSL=false&serverTimezone=UTC
+    username: ${domuspacis}
+    password: ${ananie@11072}
 
   jpa:
+    hibernate:
+      ddl-auto: none # Safer for production; use 'update' only if you are sure
     show-sql: false
 
-logging:
-  level:
-    com.domuspacis: INFO
-    org.springframework.security: WARN
-    org.hibernate.SQL: WARN
+  logging:
+    level:
+      root: WARN
+      com.domuspacis: INFO
+      org.springframework.web: WARN
