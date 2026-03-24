@@ -25,23 +25,8 @@
             </encoder>
         </appender>
 
-        <appender name="FILE_JSON" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <file>logs/domuspacis.log</file>
-            <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-                <fileNamePattern>logs/domuspacis.%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
-                <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
-                    <maxFileSize>100MB</maxFileSize>
-                </timeBasedFileNamingAndTriggeringPolicy>
-                <maxHistory>30</maxHistory>
-            </rollingPolicy>
-            <encoder class="net.logstash.logback.encoder.LogstashEncoder">
-                <includeMdcKeyName>correlationId</includeMdcKeyName>
-            </encoder>
-        </appender>
-
         <root level="INFO">
             <appender-ref ref="STDOUT_JSON"/>
-            <appender-ref ref="FILE_JSON"/>
         </root>
 
         <logger name="com.domuspacis" level="INFO"/>
