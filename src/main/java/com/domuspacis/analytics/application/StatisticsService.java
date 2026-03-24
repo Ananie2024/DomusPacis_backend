@@ -38,7 +38,7 @@ public class StatisticsService {
     private final InventoryItemRepository      inventoryItemRepository;
     private final EmployeeRepository           employeeRepository;
 
-    @Value("${domuspacis.founding-year}")
+    @Value("${domuspacis.founding-year:2026}")
     private int foundingYear;
 
     // ── Overview KPIs ─────────────────────────────────────────────────────────
