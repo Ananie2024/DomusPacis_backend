@@ -10,8 +10,8 @@ spring:
     password: ${MYSQLPASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 5        # down from default 10
-      minimum-idle: 2             # keep 2 idle connections
+      maximum-pool-size: 3      # down from default 10
+      minimum-idle: 1            # keep 1 idle connections
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
@@ -19,6 +19,10 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
+      jdbc:
+        batch_size: 10
+        order_inserts: true
+        order_updates: true
     show-sql: false
     open-in-view: false
     mvc:
