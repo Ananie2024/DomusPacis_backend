@@ -50,9 +50,14 @@ public class AuthService {
                 .build();
         userRepository.save(user);
         log.info("New customer registered: {}", user.getEmail());
-        String token = jwtService.generateToken(user);
+        String token        = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
-        return new AuthResponse(token, refreshToken, user.getEmail(), user.getRole().name(), jwtService.getExpirationMillis());
+        return new AuthResponse(
+                token, refreshToken,
+                user.getId().toString(),
+                user.getEmail(), user.getFirstName(), user.getLastName(),
+                user.getRole().name(), jwtService.getExpirationMillis()
+        );
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -61,10 +66,15 @@ public class AuthService {
         );
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new ResourceNotFoundException("User", request.email()));
-        String token = jwtService.generateToken(user);
+        String token        = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user);
         log.info("User logged in: {}", user.getEmail());
-        return new AuthResponse(token, refreshToken, user.getEmail(), user.getRole().name(), jwtService.getExpirationMillis());
+        return new AuthResponse(
+                token, refreshToken,
+                user.getId().toString(),
+                user.getEmail(), user.getFirstName(), user.getLastName(),
+                user.getRole().name(), jwtService.getExpirationMillis()
+        );
     }
 
     public AuthResponse refreshToken(String refreshToken) {
@@ -74,9 +84,14 @@ public class AuthService {
         if (!jwtService.isTokenValid(refreshToken, user)) {
             throw new BusinessRuleViolationException("Invalid or expired refresh token");
         }
-        String newToken = jwtService.generateToken(user);
+        String newToken        = jwtService.generateToken(user);
         String newRefreshToken = jwtService.generateRefreshToken(user);
-        return new AuthResponse(newToken, newRefreshToken, user.getEmail(), user.getRole().name(), jwtService.getExpirationMillis());
+        return new AuthResponse(
+                newToken, newRefreshToken,
+                user.getId().toString(),
+                user.getEmail(), user.getFirstName(), user.getLastName(),
+                user.getRole().name(), jwtService.getExpirationMillis()
+        );
     }
 
     @Audited("CREATE_USER")
