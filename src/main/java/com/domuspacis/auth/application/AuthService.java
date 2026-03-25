@@ -62,13 +62,13 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         // Check user exists first
-        User user = userRepository.findByEmail(request.email())
+        User Logginguser = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new ResourceNotFoundException("User", request.email()));
 
         log.info("User found: {}, active: {}, hashLength: {}",
-                user.getEmail(),
-                user.getIsActive(),
-                user.getPasswordHash() != null ? user.getPasswordHash().length() : "NULL"
+                Logginguser.getEmail(),
+                Logginguser.getIsActive(),
+                Logginguser.getPasswordHash() != null ? Logginguser.getPasswordHash().length() : "NULL"
         );
 
         authenticationManager.authenticate(
