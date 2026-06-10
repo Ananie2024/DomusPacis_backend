@@ -29,6 +29,12 @@ spring:
       pathmatch:
         use-suffix-pattern: false
 
+
+    properties:
+      hibernate:
+        type:
+          preferred_uuid_jdbc_type= VARCHAR:
+
 management:
   endpoints:
     web:
