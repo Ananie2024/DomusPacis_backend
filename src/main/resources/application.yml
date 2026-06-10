@@ -47,7 +47,7 @@ management:
             enable: true
 
 server:
-  # Crucial for Railway to bind the port
+
   port: ${PORT:8080}
 
 # STOPS THE LOG FLOODING
