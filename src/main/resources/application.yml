@@ -79,6 +79,3 @@ jwt:
 app:
   cors:
     allowed-origins: ${CORS_ORIGINS:*}
-java:
-  runtime:
-    version=21:
