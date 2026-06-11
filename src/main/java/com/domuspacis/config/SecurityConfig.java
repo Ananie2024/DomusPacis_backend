@@ -83,15 +83,17 @@ public class SecurityConfig {
 
         List<String> origins = Arrays.asList(allowedOrigins.split(","));
 
+        // Never allow wildcard with credentials — replace with explicit origin
         if (origins.contains("*")) {
-            configuration.setAllowedOriginPatterns(List.of("*"));
+            configuration.setAllowedOrigins(List.of(
+                    "https://domuspaciskigali.vercel.app",
+                    "http://localhost:3000"
+            ));
         } else {
             configuration.setAllowedOrigins(origins);
         }
 
-        configuration.setAllowedMethods(
-                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-        );
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
         configuration.setExposedHeaders(List.of("X-Correlation-ID"));
