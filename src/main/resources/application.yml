@@ -33,7 +33,7 @@ spring:
     properties:
       hibernate:
         type:
-          preferred_uuid_jdbc_type= VARCHAR:
+          preferred_uuid_jdbc_type: VARCHAR
 
 management:
   endpoints:
