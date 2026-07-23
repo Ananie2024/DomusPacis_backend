@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,6 +33,8 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final String TEMP_PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
 
     // ── all your existing methods unchanged ──────────────────────────────────
 
@@ -145,11 +148,25 @@ public class AuthService {
     }
 
     @Audited("RESET_USER_PASSWORD")
+    public ResetPasswordResponse resetPassword(UUID userId) {
+        String temporaryPassword = generateTemporaryPassword();
+        resetPassword(userId, temporaryPassword);
+        return new ResetPasswordResponse(temporaryPassword);
+    }
+
     public void resetPassword(UUID userId, @SensitiveParam String newPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+    }
+
+    private String generateTemporaryPassword() {
+        StringBuilder password = new StringBuilder(14);
+        for (int i = 0; i < 14; i++) {
+            password.append(TEMP_PASSWORD_CHARS.charAt(SECURE_RANDOM.nextInt(TEMP_PASSWORD_CHARS.length())));
+        }
+        return password.toString();
     }
 
     // ── 3 NEW METHODS ────────────────────────────────────────────────────────

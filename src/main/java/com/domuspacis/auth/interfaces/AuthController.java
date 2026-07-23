@@ -71,6 +71,30 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("User deactivated", null));
     }
 
+    @PatchMapping("/admin/users/{userId}/activate")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Activate user", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<Void>> activateUser(@PathVariable UUID userId) {
+        authService.activateUser(userId);
+        return ResponseEntity.ok(ApiResponse.success("User activated", null));
+    }
+
+    @PutMapping("/admin/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Update user", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<UserResponse>> updateUser(
+            @PathVariable UUID userId,
+            @Valid @RequestBody UpdateUserRequest request) {
+        return ResponseEntity.ok(ApiResponse.success("User updated", authService.updateUser(userId, request)));
+    }
+
+    @PostMapping("/admin/users/{userId}/reset-password")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Reset user password", security = @SecurityRequirement(name = "bearerAuth"))
+    public ResponseEntity<ApiResponse<ResetPasswordResponse>> resetPassword(@PathVariable UUID userId) {
+        return ResponseEntity.ok(ApiResponse.success("Password reset", authService.resetPassword(userId)));
+    }
+
     @PostMapping("/password-reset/initiate")
     @Operation(summary = "Initiate password reset")
     public ResponseEntity<ApiResponse<Void>> initiatePasswordReset(@RequestParam String email) {

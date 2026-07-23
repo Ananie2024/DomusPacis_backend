@@ -1,7 +1,13 @@
 ﻿target/
 *.log
 .env
+.env.local
 application-local.yml
 application-dev.yml
 .idea/
 *.iml
+data/
+*.mv.db
+domus-pacis-frontend/.next/
+domus-pacis-frontend/node_modules/
+domus-pacis-frontend/tsconfig.tsbuildinfo
