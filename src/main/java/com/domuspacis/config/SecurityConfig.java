@@ -57,9 +57,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/public/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        // Booking public read
+                        // Booking public read/create
                         .requestMatchers(HttpMethod.GET, "/api/v1/service-assets/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/menu-items/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/bookings").permitAll()
                         // Role-restricted endpoints
                         .requestMatchers("/api/v1/auth/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/tax/**").hasAnyRole("ADMIN", "FINANCE", "MANAGER")

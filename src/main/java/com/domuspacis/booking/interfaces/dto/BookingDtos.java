@@ -12,12 +12,15 @@ public final class BookingDtos {
     private BookingDtos() {}
 
     public record CreateBookingRequest(
-        @NotNull UUID customerId,
-        @NotNull UUID serviceAssetId,
+        @NotBlank String serviceAssetId,
         @NotNull LocalDate checkInDate,
         @NotNull LocalDate checkOutDate,
         @Min(1) Integer numberOfGuests,
-        String specialRequests
+        String specialRequests,
+        String firstName,
+        String lastName,
+        String email,
+        String phone
     ) {}
 
     public record BookingResponse(

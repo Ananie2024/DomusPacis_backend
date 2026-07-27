@@ -36,10 +36,25 @@ public class BookingService {
     private final ApplicationEventPublisher eventPublisher;
 
     public BookingResponse createBooking(CreateBookingRequest req) {
-        Customer customer = customerRepository.findById(req.customerId())
-                .orElseThrow(() -> new ResourceNotFoundException("Customer", req.customerId()));
-        ServiceAsset asset = serviceAssetRepository.findById(req.serviceAssetId())
-                .orElseThrow(() -> new ResourceNotFoundException("ServiceAsset", req.serviceAssetId()));
+        Customer customer = customerRepository.findByEmail(req.email())
+                .orElseGet(() -> {
+                    Customer newCustomer = Customer.builder()
+                            .fullName(req.firstName() + " " + req.lastName())
+                            .email(req.email())
+                            .phone(req.phone())
+                            .build();
+                    return customerRepository.save(newCustomer);
+                });
+
+        ServiceAsset asset;
+        String serviceAssetId = req.serviceAssetId();
+        if (serviceAssetId != null && isValidUuid(serviceAssetId)) {
+            asset = serviceAssetRepository.findById(UUID.fromString(serviceAssetId))
+                    .orElseThrow(() -> new ResourceNotFoundException("ServiceAsset", serviceAssetId));
+        } else {
+            asset = serviceAssetRepository.findFirstByAssetTypeOrderByName(ServiceAsset.AssetType.valueOf(serviceAssetId))
+                    .orElseThrow(() -> new ResourceNotFoundException("ServiceAsset", serviceAssetId));
+        }
 
         if (!req.checkOutDate().isAfter(req.checkInDate()))
             throw new BusinessRuleViolationException("Check-out must be after check-in");
@@ -153,6 +168,15 @@ public class BookingService {
     private Booking findById(UUID id) {
         return bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", id));
+    }
+
+    private boolean isValidUuid(String value) {
+        try {
+            UUID.fromString(value);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private BigDecimal computeTotal(ServiceAsset asset, LocalDate checkIn, LocalDate checkOut) {

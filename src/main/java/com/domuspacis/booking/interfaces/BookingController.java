@@ -30,8 +30,7 @@ public class BookingController {
     private final BookingService bookingService;
 
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "Create a booking request")
+    @Operation(summary = "Create a public booking request")
     public ResponseEntity<ApiResponse<BookingResponse>> create(
             @Valid @RequestBody CreateBookingRequest req) {
         return ResponseEntity.status(HttpStatus.CREATED)

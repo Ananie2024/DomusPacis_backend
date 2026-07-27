@@ -82,10 +82,15 @@ class BookingIntegrationTest extends AbstractIntegrationTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         CreateBookingRequest req = new CreateBookingRequest(
-                customerId, assetId,
+                assetId.toString(),
                 LocalDate.now().plusDays(5),
                 LocalDate.now().plusDays(7),
-                2, "Quiet room please");
+                2,
+                "Quiet room please",
+                "Jean",
+                "Damascene",
+                "jd@test.rw",
+                "+250788000001");
 
         ResponseEntity<ApiResponse> resp = restTemplate.exchange(
                 "/api/v1/bookings", HttpMethod.POST,
@@ -104,7 +109,9 @@ class BookingIntegrationTest extends AbstractIntegrationTest {
 
         LocalDate ci = LocalDate.now().plusDays(20);
         LocalDate co = LocalDate.now().plusDays(22);
-        CreateBookingRequest req = new CreateBookingRequest(customerId, assetId, ci, co, 1, null);
+        CreateBookingRequest req = new CreateBookingRequest(
+                assetId.toString(), ci, co, 1, null,
+                "Jean", "Damascene", "jd@test.rw", "+250788000001");
 
         // First booking
         restTemplate.exchange("/api/v1/bookings", HttpMethod.POST,

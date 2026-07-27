@@ -43,6 +43,10 @@ public abstract class ServiceAsset extends BaseEntity {
     @Column(name = "pricing_unit", nullable = false, length = 20)
     private PricingUnit pricingUnit;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "asset_type", nullable = false, length = 30, insertable = false, updatable = false)
+    private AssetType assetType;
+
     @Column(name = "is_available", nullable = false)
     @Builder.Default
     private Boolean isAvailable = true;
@@ -53,4 +57,11 @@ public abstract class ServiceAsset extends BaseEntity {
     @Column(name = "image_path")
     @Builder.Default
     private List<String> images = new ArrayList<>();
+
+    public enum AssetType {
+        ROOM,
+        CONFERENCE_HALL,
+        WEDDING_GARDEN,
+        RETREAT_CENTER
+    }
 }
