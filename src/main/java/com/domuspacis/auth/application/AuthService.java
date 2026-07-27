@@ -36,8 +36,6 @@ public class AuthService {
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final String TEMP_PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
 
-    // ── all your existing methods unchanged ──────────────────────────────────
-
     @Audited("CREATE_USER")
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.email())) {
@@ -64,16 +62,7 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request) {
-        // Check user exists first
-        User Logginguser = userRepository.findByEmail(request.email())
-                .orElseThrow(() -> new ResourceNotFoundException("User", request.email()));
-
-        log.info("User found: {}, active: {}, hashLength: {}",
-                Logginguser.getEmail(),
-                Logginguser.getIsActive(),
-                Logginguser.getPasswordHash() != null ? Logginguser.getPasswordHash().length() : "NULL"
-        );
-
+        // Remove pre-auth check to prevent user enumeration
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
@@ -169,8 +158,6 @@ public class AuthService {
         return password.toString();
     }
 
-    // ── 3 NEW METHODS ────────────────────────────────────────────────────────
-
     @Audited("LIST_USERS")
     @Transactional(readOnly = true)
     public UserPageResponse getUsers(String search, UserRole role, Boolean isActive, Pageable pageable) {
@@ -230,8 +217,6 @@ public class AuthService {
         userRepository.save(user);
         log.info("User re-activated: {}", user.getEmail());
     }
-
-    // ── shared private helper ─────────────────────────────────────────────────
 
     private UserResponse toUserResponse(User user) {
         return new UserResponse(user.getId(), user.getEmail(), user.getFirstName(),

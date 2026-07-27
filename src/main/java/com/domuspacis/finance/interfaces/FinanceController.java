@@ -1,8 +1,10 @@
 package com.domuspacis.finance.interfaces;
 
+import com.domuspacis.auth.infrastructure.UserRepository;
 import com.domuspacis.finance.application.*;
 import com.domuspacis.finance.domain.*;
 import com.domuspacis.finance.interfaces.dto.FinanceDtos.*;
+import com.domuspacis.shared.exception.ResourceNotFoundException;
 import com.domuspacis.shared.util.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -34,6 +36,7 @@ public class FinanceController {
     private final InvoiceService          invoiceService;
     private final ExpenseService          expenseService;
     private final FinancialReportService  reportService;
+    private final UserRepository          userRepository;
 
     // ── Payments ──────────────────────────────────────────────────────────────
 
@@ -124,9 +127,11 @@ public class FinanceController {
     @Operation(summary = "Approve expense")
     public ResponseEntity<ApiResponse<ExpenseResponse>> approveExpense(
             @PathVariable UUID id, @AuthenticationPrincipal UserDetails principal) {
-        // In a real app we'd resolve the employee UUID from the principal
+        UUID approverId = userRepository.findByEmail(principal.getUsername())
+                .orElseThrow(() -> new ResourceNotFoundException("User", principal.getUsername()))
+                .getId();
         return ResponseEntity.ok(ApiResponse.success(
-                toExpenseResponse(expenseService.approveExpense(id, null))));
+                toExpenseResponse(expenseService.approveExpense(id, approverId))));
     }
 
     @DeleteMapping("/expenses/{id}")
