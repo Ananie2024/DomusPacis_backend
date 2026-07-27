@@ -15,6 +15,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,15 +49,8 @@ public class BookingService {
                     return customerRepository.save(newCustomer);
                 });
 
-        ServiceAsset asset;
-        String serviceAssetId = req.serviceAssetId();
-        if (serviceAssetId != null && isValidUuid(serviceAssetId)) {
-            asset = serviceAssetRepository.findById(UUID.fromString(serviceAssetId))
-                    .orElseThrow(() -> new ResourceNotFoundException("ServiceAsset", serviceAssetId));
-        } else {
-            asset = serviceAssetRepository.findFirstByAssetTypeOrderByName(ServiceAsset.AssetType.valueOf(serviceAssetId))
-                    .orElseThrow(() -> new ResourceNotFoundException("ServiceAsset", serviceAssetId));
-        }
+        ServiceAsset asset = serviceAssetRepository.findById(req.serviceAssetId())
+                .orElseThrow(() -> new ResourceNotFoundException("ServiceAsset", req.serviceAssetId()));
 
         if (!req.checkOutDate().isAfter(req.checkInDate()))
             throw new BusinessRuleViolationException("Check-out must be after check-in");
@@ -140,7 +136,9 @@ public class BookingService {
 
     @Transactional(readOnly = true)
     public BookingResponse getById(UUID id) {
-        return toResponse(findById(id));
+        Booking booking = findById(id);
+        enforceOwnershipOrStaff(booking);
+        return toResponse(booking);
     }
 
     @Transactional(readOnly = true)
@@ -170,12 +168,30 @@ public class BookingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", id));
     }
 
-    private boolean isValidUuid(String value) {
-        try {
-            UUID.fromString(value);
-            return true;
-        } catch (IllegalArgumentException e) {
-            return false;
+    /**
+     * Ensures the current authenticated user is either a staff member
+     * (ADMIN, MANAGER, STAFF) or the owner of the booking's customer record.
+     */
+    private void enforceOwnershipOrStaff(Booking booking) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated()) {
+            throw new AccessDeniedException("Authentication required to view this booking");
+        }
+
+        boolean isStaff = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN")
+                        || a.getAuthority().equals("ROLE_MANAGER")
+                        || a.getAuthority().equals("ROLE_STAFF"));
+
+        if (isStaff) {
+            return;
+        }
+
+        String currentUserEmail = auth.getName();
+        String bookingCustomerEmail = booking.getCustomer().getEmail();
+
+        if (bookingCustomerEmail == null || !bookingCustomerEmail.equals(currentUserEmail)) {
+            throw new AccessDeniedException("You are not authorized to view this booking");
         }
     }
 

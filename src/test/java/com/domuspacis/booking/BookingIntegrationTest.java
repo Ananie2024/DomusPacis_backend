@@ -82,7 +82,7 @@ class BookingIntegrationTest extends AbstractIntegrationTest {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         CreateBookingRequest req = new CreateBookingRequest(
-                assetId.toString(),
+                assetId,
                 LocalDate.now().plusDays(5),
                 LocalDate.now().plusDays(7),
                 2,
@@ -110,7 +110,7 @@ class BookingIntegrationTest extends AbstractIntegrationTest {
         LocalDate ci = LocalDate.now().plusDays(20);
         LocalDate co = LocalDate.now().plusDays(22);
         CreateBookingRequest req = new CreateBookingRequest(
-                assetId.toString(), ci, co, 1, null,
+                assetId, ci, co, 1, null,
                 "Jean", "Damascene", "jd@test.rw", "+250788000001");
 
         // First booking

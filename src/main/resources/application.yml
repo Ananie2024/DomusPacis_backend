@@ -3,37 +3,39 @@ spring:
     name: domuspacis-platform
 
   datasource:
-    # This line looks for Railway variables (MYSQLHOST) first.
-    # If missing, it uses localhost for your local machine.
     url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:domuspacis}?useSSL=false&allowPublicKeyRetrieval=true&connectTimeout=5000
     username: ${MYSQLUSER:root}
     password: ${MYSQLPASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 3      # down from default 10
-      minimum-idle: 1            # keep 1 idle connections
+      maximum-pool-size: 3
+      minimum-idle: 1
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
 
   jpa:
     hibernate:
-      ddl-auto: update
-      jdbc:
-        batch_size: 10
-        order_inserts: true
-        order_updates: true
-    show-sql: false
+      ddl-auto: validate
     open-in-view: false
+    show-sql: false
     mvc:
       pathmatch:
         use-suffix-pattern: false
-
-
     properties:
       hibernate:
+        jdbc:
+          batch_size: 10
+          order_inserts: true
+          order_updates: true
         type:
           preferred_uuid_jdbc_type: VARCHAR
+
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+    clean-disabled: false
 
 management:
   endpoints:
@@ -53,26 +55,16 @@ management:
             enable: true
 
 server:
-
   port: ${PORT:8080}
 
-# STOPS THE LOG FLOODING
 logging:
   level:
-    root: WARN                          # Only warnings/errors from everything else
-
-    # Your app - see info + all errors
+    root: WARN
     com.domuspacis: INFO
-
-    # Spring - only errors (startup failures, bean issues)
     org.springframework: ERROR
-    org.springframework.web: WARN       # Promotes 404s and bad requests to visible
-
-    # Database - only errors (connection failures, query errors)
+    org.springframework.web: WARN
     org.hibernate: ERROR
-    com.zaxxer.hikari: WARN             # Show pool warnings (exhaustion, timeouts)
-
-    # Security - show auth failures
+    com.zaxxer.hikari: WARN
     org.springframework.security: WARN
     org.apache.catalina: WARN
     org.apache.tomcat: WARN

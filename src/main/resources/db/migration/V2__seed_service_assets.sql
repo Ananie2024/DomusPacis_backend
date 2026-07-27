@@ -1,5 +1,5 @@
--- Comprehensive Service Assets Seed Data
--- All asset types with realistic pricing and descriptions
+-- Seed data for service_assets
+-- Comprehensive seed data for all asset types with realistic pricing and descriptions.
 
 -- ============================================================
 -- ROOMS (6 rooms with different types)
