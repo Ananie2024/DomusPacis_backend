@@ -35,13 +35,8 @@ spring:
     enabled: true
     baseline-on-migrate: true
     locations: classpath:db/migration
-    clean-disabled: false
+    clean-disabled: true
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
   mail:
     host: smtp.gmail.com
     port: 587
@@ -53,6 +48,12 @@ management:
           auth: true
           starttls:
             enable: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
 
 server:
   port: ${PORT:8080}

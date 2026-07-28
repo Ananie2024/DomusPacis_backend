@@ -5,7 +5,7 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 @Entity
-@DiscriminatorValue("CONF_HALL")
+@DiscriminatorValue("CONFERENCE_HALL")
 @Getter @Setter @NoArgsConstructor @SuperBuilder
 public class ConferenceHall extends ServiceAsset {
 

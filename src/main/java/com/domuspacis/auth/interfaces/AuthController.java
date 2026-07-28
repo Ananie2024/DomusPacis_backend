@@ -3,6 +3,7 @@ package com.domuspacis.auth.interfaces;
 import com.domuspacis.auth.application.AuthService;
 import com.domuspacis.auth.domain.UserRole;
 import com.domuspacis.auth.interfaces.dto.*;
+import com.domuspacis.shared.exception.BusinessRuleViolationException;
 import com.domuspacis.shared.util.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -100,6 +101,17 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> initiatePasswordReset(@RequestParam String email) {
         authService.initiatePasswordReset(email);
         return ResponseEntity.ok(ApiResponse.success("Password reset email sent", null));
+    }
+
+    @PostMapping("/password-reset/complete")
+    @Operation(summary = "Complete password reset with token")
+    public ResponseEntity<ApiResponse<Void>> completePasswordReset(@Valid @RequestBody CompletePasswordResetRequest request) {
+        try {
+            authService.completePasswordReset(request.token(), request.newPassword());
+            return ResponseEntity.ok(ApiResponse.success("Password reset successful", null));
+        } catch (BusinessRuleViolationException e) {
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        }
     }
     @GetMapping("/admin/users")
     @PreAuthorize("hasRole('ADMIN')")

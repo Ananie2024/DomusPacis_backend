@@ -2,8 +2,10 @@ package com.domuspacis.auth.application;
 
 import com.domuspacis.aop.annotation.Audited;
 import com.domuspacis.aop.annotation.SensitiveParam;
+import com.domuspacis.auth.domain.PasswordResetToken;
 import com.domuspacis.auth.domain.User;
 import com.domuspacis.auth.domain.UserRole;
+import com.domuspacis.auth.infrastructure.PasswordResetTokenRepository;
 import com.domuspacis.auth.infrastructure.UserRepository;
 import com.domuspacis.auth.interfaces.dto.*;
 import com.domuspacis.shared.exception.BusinessRuleViolationException;
@@ -20,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -30,35 +33,40 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
+    private final EmailService emailService;
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private static final String TEMP_PASSWORD_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%";
+    private static final int PASSWORD_RESET_TOKEN_EXPIRY_HOURS = 24;
 
     @Audited("CREATE_USER")
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
-            throw new BusinessRuleViolationException("Email already registered: " + request.email());
+        try {
+            User user = User.builder()
+                    .email(request.email())
+                    .passwordHash(passwordEncoder.encode(request.password()))
+                    .role(UserRole.CUSTOMER)
+                    .firstName(request.firstName())
+                    .lastName(request.lastName())
+                    .isActive(true)
+                    .build();
+            userRepository.save(user);
+            log.info("New customer registered: {}", user.getEmail());
+            String token        = jwtService.generateToken(user);
+            String refreshToken = jwtService.generateRefreshToken(user);
+            return new AuthResponse(
+                    token, refreshToken,
+                    user.getId().toString(),
+                    user.getEmail(), user.getFirstName(), user.getLastName(),
+                    user.getRole().name(), jwtService.getExpirationMillis()
+            );
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Generic error to prevent email enumeration
+            throw new BusinessRuleViolationException("Unable to complete registration");
         }
-        User user = User.builder()
-                .email(request.email())
-                .passwordHash(passwordEncoder.encode(request.password()))
-                .role(UserRole.CUSTOMER)
-                .firstName(request.firstName())
-                .lastName(request.lastName())
-                .isActive(true)
-                .build();
-        userRepository.save(user);
-        log.info("New customer registered: {}", user.getEmail());
-        String token        = jwtService.generateToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
-        return new AuthResponse(
-                token, refreshToken,
-                user.getId().toString(),
-                user.getEmail(), user.getFirstName(), user.getLastName(),
-                user.getRole().name(), jwtService.getExpirationMillis()
-        );
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -133,7 +141,38 @@ public class AuthService {
 
     @Audited("RESET_USER_PASSWORD")
     public void initiatePasswordReset(String email) {
-        log.info("Password reset initiated for: {}", email);
+        userRepository.findByEmail(email).ifPresentOrElse(
+            user -> {
+                // Invalidate any existing valid tokens for this user
+                passwordResetTokenRepository.invalidateAllUserTokens(user, LocalDateTime.now());
+
+                // Generate secure random token
+                String resetToken = generateSecureToken();
+
+                // Create password reset token
+                PasswordResetToken passwordResetToken = PasswordResetToken.builder()
+                        .token(resetToken)
+                        .user(user)
+                        .expiresAt(LocalDateTime.now().plusHours(PASSWORD_RESET_TOKEN_EXPIRY_HOURS))
+                        .used(false)
+                        .build();
+
+                passwordResetTokenRepository.save(passwordResetToken);
+
+                // Send email
+                try {
+                    emailService.sendPasswordResetEmail(user.getEmail(), user.getFirstName(), resetToken);
+                    log.info("Password reset email sent to: {}", email);
+                } catch (Exception e) {
+                    log.error("Failed to send password reset email to: {}", email, e);
+                    // Don't throw exception to prevent user enumeration
+                }
+            },
+            () -> {
+                // Don't reveal whether email exists or not (prevent user enumeration)
+                log.debug("Password reset requested for non-existent email: {}", email);
+            }
+        );
     }
 
     @Audited("RESET_USER_PASSWORD")
@@ -143,11 +182,47 @@ public class AuthService {
         return new ResetPasswordResponse(temporaryPassword);
     }
 
+    @Transactional
+    public void completePasswordReset(String token, String newPassword) {
+        PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new BusinessRuleViolationException("Invalid or expired password reset token"));
+
+        if (passwordResetToken.isUsed()) {
+            throw new BusinessRuleViolationException("Password reset token has already been used");
+        }
+
+        if (passwordResetToken.isExpired()) {
+            throw new BusinessRuleViolationException("Password reset token has expired");
+        }
+
+        // Mark token as used
+        passwordResetToken.setUsed(true);
+        passwordResetToken.setUsedAt(LocalDateTime.now());
+        passwordResetTokenRepository.save(passwordResetToken);
+
+        // Reset the password
+        User user = passwordResetToken.getUser();
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        log.info("Password reset completed for user: {}", user.getEmail());
+    }
+
     public void resetPassword(UUID userId, @SensitiveParam String newPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+    }
+
+    private String generateSecureToken() {
+        byte[] tokenBytes = new byte[32];
+        SECURE_RANDOM.nextBytes(tokenBytes);
+        StringBuilder token = new StringBuilder();
+        for (byte b : tokenBytes) {
+            token.append(String.format("%02x", b));
+        }
+        return token.toString();
     }
 
     private String generateTemporaryPassword() {

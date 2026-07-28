@@ -1,0 +1,28 @@
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  sql:
+    init:
+      mode: always
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+  datasource:
+    url: jdbc:h2:mem:testdb
+    username: sa
+    password: password
+    driver-class-name: org.h2.Driver
+
+  flyway:
+    enabled: false
+
+  jwt:
+    secret: test_jwt_secret_key_for_testing_purposes_only_1234567890
+
+  app:
+    cors:
+      allowed-origins: http://localhost:3000
