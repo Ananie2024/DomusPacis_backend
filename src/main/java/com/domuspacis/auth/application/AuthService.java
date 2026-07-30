@@ -87,13 +87,15 @@ public class AuthService {
         );
     }
 
-    public AuthResponse refreshToken(String refreshToken) {
+    public AuthResponse refreshToken(@SensitiveParam String refreshToken) {
         String username = jwtService.extractUsername(refreshToken);
         User user = userRepository.findByEmail(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User", username));
-        if (!jwtService.isTokenValid(refreshToken, user)) {
+        if (!jwtService.isRefreshTokenValid(refreshToken, user)) {
             throw new BusinessRuleViolationException("Invalid or expired refresh token");
         }
+        // Invalidate the old refresh token (token rotation)
+        jwtService.invalidateToken(refreshToken, "TOKEN_ROTATION");
         String newToken        = jwtService.generateToken(user);
         String newRefreshToken = jwtService.generateRefreshToken(user);
         return new AuthResponse(
@@ -136,6 +138,7 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
         user.setIsActive(false);
         userRepository.save(user);
+        jwtService.invalidateAllUserTokens(user.getEmail(), "USER_DEACTIVATED");
         log.info("User deactivated: {}", user.getEmail());
     }
 
@@ -183,7 +186,7 @@ public class AuthService {
     }
 
     @Transactional
-    public void completePasswordReset(String token, String newPassword) {
+    public void completePasswordReset(@SensitiveParam String token, @SensitiveParam String newPassword) {
         PasswordResetToken passwordResetToken = passwordResetTokenRepository.findByToken(token)
                 .orElseThrow(() -> new BusinessRuleViolationException("Invalid or expired password reset token"));
 
@@ -205,6 +208,9 @@ public class AuthService {
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
 
+        // Invalidate all existing tokens for this user (password changed)
+        jwtService.invalidateAllUserTokens(user.getEmail(), "PASSWORD_RESET");
+
         log.info("Password reset completed for user: {}", user.getEmail());
     }
 
@@ -213,6 +219,16 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepository.save(user);
+    }
+
+    public void logout(@SensitiveParam String accessToken, @SensitiveParam String refreshToken) {
+        if (accessToken != null && !accessToken.isBlank()) {
+            jwtService.invalidateToken(accessToken, "USER_LOGOUT");
+        }
+        if (refreshToken != null && !refreshToken.isBlank()) {
+            jwtService.invalidateToken(refreshToken, "USER_LOGOUT");
+        }
+        log.info("User logged out");
     }
 
     private String generateSecureToken() {

@@ -2,6 +2,7 @@ package com.domuspacis.config;
 
 import com.domuspacis.auth.application.CorrelationIdFilter;
 import com.domuspacis.auth.application.JwtAuthenticationFilter;
+import com.domuspacis.auth.application.LoginRateLimitFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -37,6 +38,7 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final CorrelationIdFilter correlationIdFilter;
+    private final LoginRateLimitFilter loginRateLimitFilter;
     private final AuthenticationProvider authenticationProvider;
 
     @Value("${app.cors.allowed-origins}")
@@ -73,6 +75,7 @@ public class SecurityConfig {
                 )
                 .authenticationProvider(authenticationProvider)
                 .addFilterBefore(correlationIdFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(loginRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

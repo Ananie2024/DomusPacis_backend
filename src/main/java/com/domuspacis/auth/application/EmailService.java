@@ -1,5 +1,6 @@
 package com.domuspacis.auth.application;
 
+import com.domuspacis.aop.annotation.SensitiveParam;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,7 +27,7 @@ public class EmailService {
     @Value("${app.frontend-url:http://localhost:3000}")
     private String frontendUrl;
 
-    public void sendPasswordResetEmail(String toEmail, String firstName, String resetToken) {
+    public void sendPasswordResetEmail(String toEmail, String firstName, @SensitiveParam String resetToken) {
         try {
             String resetUrl = frontendUrl + "/reset-password?token=" + resetToken;
             String displayName = firstName != null ? firstName : "User";

@@ -103,6 +103,13 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success("Password reset email sent", null));
     }
 
+    @PostMapping("/logout")
+    @Operation(summary = "Logout and invalidate tokens")
+    public ResponseEntity<ApiResponse<Void>> logout(@Valid @RequestBody LogoutRequest request) {
+        authService.logout(request.accessToken(), request.refreshToken());
+        return ResponseEntity.ok(ApiResponse.success("Logged out successfully", null));
+    }
+
     @PostMapping("/password-reset/complete")
     @Operation(summary = "Complete password reset with token")
     public ResponseEntity<ApiResponse<Void>> completePasswordReset(@Valid @RequestBody CompletePasswordResetRequest request) {

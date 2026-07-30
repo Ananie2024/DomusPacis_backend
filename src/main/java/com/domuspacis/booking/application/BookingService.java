@@ -106,6 +106,7 @@ public class BookingService {
     @Audited("CANCEL_BOOKING")
     public BookingResponse cancelBooking(UUID bookingId, String reason) {
         Booking booking = findById(bookingId);
+        enforceOwnershipOrStaff(booking);
         if (booking.getStatus() == BookingStatus.COMPLETED)
             throw new BusinessRuleViolationException("Completed bookings cannot be cancelled");
         booking.setStatus(BookingStatus.CANCELLED);
