@@ -11,3 +11,11 @@ data/
 domus-pacis-frontend/.next/
 domus-pacis-frontend/node_modules/
 domus-pacis-frontend/tsconfig.tsbuildinfo
+
+# Debug/scratch artifacts - never commit
+body.json
+*.ps1
+*.bat
+test-*
+query
+query.sql
