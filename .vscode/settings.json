@@ -1,4 +1,11 @@
 {
     "java.compile.nullAnalysis.mode": "disabled",
-    "java.configuration.updateBuildConfiguration": "interactive"
+    "java.configuration.updateBuildConfiguration": "interactive",
+    "tailwindCSS.experimental.configFile": "domus-pacis-frontend/tailwind.config.js",
+    "tailwindCSS.include": [
+        "domus-pacis-frontend/src/**/*.{js,ts,jsx,tsx}",
+        "domus-pacis-frontend/pages/**/*.{js,ts,jsx,tsx}",
+        "domus-pacis-frontend/components/**/*.{js,ts,jsx,tsx}"
+    ],
+    "tailwindCSS.rootFontSize": 16
 }
