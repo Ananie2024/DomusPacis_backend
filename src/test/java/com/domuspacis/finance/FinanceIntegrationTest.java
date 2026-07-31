@@ -29,7 +29,6 @@ class FinanceIntegrationTest extends AbstractIntegrationTest {
                 "Monthly electricity bill",
                 new BigDecimal("150000"),
                 LocalDate.now(),
-                null,
                 "ELEC-2025-01");
 
         assertThat(expense.getId()).isNotNull();

@@ -10,11 +10,13 @@ import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 @Repository
 public interface RevenueTransactionRepository extends JpaRepository<RevenueTransaction, UUID> {
     List<RevenueTransaction> findByTransactionDateBetween(LocalDate from, LocalDate to);
     Page<RevenueTransaction> findBySourceType(RevenueSourceType type, Pageable pageable);
+    Optional<RevenueTransaction> findBySourceTypeAndSourceId(RevenueSourceType sourceType, UUID sourceId);
     @Query("SELECT COALESCE(SUM(r.amount),0) FROM RevenueTransaction r WHERE r.transactionDate BETWEEN :from AND :to")
     BigDecimal sumByDateRange(@Param("from") LocalDate from, @Param("to") LocalDate to);
     @Query("SELECT r.sourceType, COALESCE(SUM(r.amount),0) FROM RevenueTransaction r WHERE r.transactionDate BETWEEN :from AND :to GROUP BY r.sourceType")

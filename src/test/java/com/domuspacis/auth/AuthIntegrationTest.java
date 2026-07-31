@@ -10,6 +10,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.*;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.web.client.RestTemplate;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -18,6 +23,9 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
 
     @Autowired
     private TestRestTemplate restTemplate;
+
+    @org.springframework.boot.test.web.server.LocalServerPort
+    private int serverPort;
 
     @Test
     @DisplayName("Customer can register and receive JWT tokens")
@@ -85,5 +93,75 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
                 "/api/v1/auth/register", req, ApiResponse.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+
+    @Test
+    @DisplayName("Password reset rate limit returns 429 after exceeding limit")
+    void passwordReset_rateLimitExceeded_returns429() {
+        // First register a user
+        RegisterRequest reg = new RegisterRequest(
+                "ratelimit@domuspacis.org", "SecurePass123!", "Rate", "Limit");
+        restTemplate.postForEntity("/api/v1/auth/register", reg, ApiResponse.class);
+
+        // Send 3 password reset requests (the configured limit)
+        for (int i = 0; i < 3; i++) {
+            ResponseEntity<ApiResponse> response = restTemplate.postForEntity(
+                    "/api/v1/auth/password-reset/initiate?email=ratelimit@domuspacis.org",
+                    null, ApiResponse.class);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        // 4th request should be rate limited
+        ResponseEntity<ApiResponse> rateLimitedResponse = restTemplate.postForEntity(
+                "/api/v1/auth/password-reset/initiate?email=ratelimit@domuspacis.org",
+                null, ApiResponse.class);
+
+        assertThat(rateLimitedResponse.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(rateLimitedResponse.getBody()).isNotNull();
+        assertThat(rateLimitedResponse.getBody().isSuccess()).isFalse();
+        assertThat(rateLimitedResponse.getBody().getMessage())
+                .contains("Too many password reset requests");
+    }
+
+    @Test
+    @DisplayName("Rate limit cannot be bypassed via X-Forwarded-For header spoofing")
+    void rateLimit_cannotBeBypassed_withSpoofedHeaders() {
+        // Register a user
+        RegisterRequest reg = new RegisterRequest(
+                "spoof@domuspacis.org", "SecurePass123!", "Spoof", "Test");
+        restTemplate.postForEntity("/api/v1/auth/register", reg, ApiResponse.class);
+
+        // Create a RestTemplate that adds a different X-Forwarded-For header on each request
+        RestTemplate spoofingRestTemplate = new RestTemplate();
+        List<ClientHttpRequestInterceptor> interceptors = new ArrayList<>();
+        interceptors.add((request, body, execution) -> {
+            // Spoof a different IP address on each request
+            String fakeIp = "192.168.1." + (interceptors.size() + 1);
+            request.getHeaders().add("X-Forwarded-For", fakeIp);
+            return execution.execute(request, body);
+        });
+        spoofingRestTemplate.setInterceptors(interceptors);
+
+        // Send 3 requests with different spoofed IPs
+        // If the application trusts X-Forwarded-For, each would get a fresh rate limit bucket
+        // With the fix, all requests should be tracked by the actual client IP
+        for (int i = 0; i < 3; i++) {
+            ResponseEntity<ApiResponse> response = spoofingRestTemplate.postForEntity(
+                    "http://localhost:" + serverPort + "/api/v1/auth/password-reset/initiate?email=spoof@domuspacis.org",
+                    null, ApiResponse.class);
+            assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        }
+
+        // 4th request (even with a new spoofed IP) should still be rate limited
+        // because the server uses request.getRemoteAddr(), not the spoofed header
+        ResponseEntity<ApiResponse> rateLimitedResponse = spoofingRestTemplate.postForEntity(
+                "http://localhost:" + serverPort + "/api/v1/auth/password-reset/initiate?email=spoof@domuspacis.org",
+                null, ApiResponse.class);
+
+        assertThat(rateLimitedResponse.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(rateLimitedResponse.getBody()).isNotNull();
+        assertThat(rateLimitedResponse.getBody().isSuccess()).isFalse();
+        assertThat(rateLimitedResponse.getBody().getMessage())
+                .contains("Too many password reset requests");
     }
 }

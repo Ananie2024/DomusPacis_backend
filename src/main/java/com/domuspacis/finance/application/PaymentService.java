@@ -37,8 +37,21 @@ public class PaymentService {
         Booking booking = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking", bookingId));
 
-        Payment payment = paymentRepository.findByBookingId(bookingId)
-                .orElseGet(() -> Payment.builder()
+        // Check for existing payment to prevent re-recording
+        java.util.Optional<Payment> existingPayment = paymentRepository.findByBookingId(bookingId);
+        if (existingPayment.isPresent()) {
+            Payment existing = existingPayment.get();
+            if (existing.getStatus() == Payment.PaymentStatus.PAID) {
+                log.info("Payment already recorded for booking {}: returning existing", bookingId);
+                return existing;
+            }
+            if (existing.getStatus() == Payment.PaymentStatus.REFUNDED) {
+                throw new BusinessRuleViolationException(
+                        "Cannot re-record payment for booking " + bookingId + " — it has been refunded");
+            }
+        }
+
+        Payment payment = existingPayment.orElseGet(() -> Payment.builder()
                         .booking(booking)
                         .currency("RWF")
                         .build());
@@ -95,6 +108,12 @@ public class PaymentService {
     }
 
     private void createRevenueTransaction(Booking booking, java.math.BigDecimal amount) {
+        // Idempotent: skip if revenue transaction already exists for this booking
+        if (revenueTransactionRepository.findBySourceTypeAndSourceId(
+                RevenueSourceType.BOOKING, booking.getId()).isPresent()) {
+            log.info("Revenue transaction already exists for booking {}, skipping", booking.getId());
+            return;
+        }
         RevenueTransaction rt = RevenueTransaction.builder()
                 .sourceType(RevenueSourceType.BOOKING)
                 .sourceId(booking.getId())

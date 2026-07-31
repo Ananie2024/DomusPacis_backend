@@ -31,6 +31,14 @@ public class TaxCalculationService {
     private final RevenueTransactionRepository revenueRepo;
 
     public TaxRecord computeMonthlyVat(YearMonth period) {
+        // Idempotent: prevent duplicate VAT records for the same period
+        List<TaxRecord> existing = taxRecordRepository.findByPeriodYearAndPeriodMonth(
+                period.getYear(), period.getMonthValue());
+        if (!existing.isEmpty()) {
+            throw new BusinessRuleViolationException(
+                    "VAT already computed for period " + period + " — found " + existing.size() + " record(s)");
+        }
+
         TaxRuleConfig rule = ruleConfigRepository
                 .findActiveRule(TaxType.VAT, LocalDate.now())
                 .orElseThrow(() -> new BusinessRuleViolationException("No active VAT rule found"));

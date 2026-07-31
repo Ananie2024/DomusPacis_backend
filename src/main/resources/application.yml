@@ -78,8 +78,11 @@ jwt:
 app:
   cors:
     allowed-origins: ${CORS_ORIGINS:*}
+  trust-proxy-headers: false
   rate-limit:
     login:
       max-requests-per-minute: 5
       max-failed-attempts: 5
       lockout-duration-minutes: 15
+    password-reset:
+      max-requests-per-minute: 3

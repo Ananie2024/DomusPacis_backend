@@ -105,7 +105,7 @@ public class FinanceController {
     public ResponseEntity<ApiResponse<ExpenseResponse>> logExpense(
             @Valid @RequestBody LogExpenseRequest req) {
         Expense e = expenseService.logExpense(req.category(), req.description(),
-                req.amount(), req.expenseDate(), req.approvedBy(), req.receiptReference());
+                req.amount(), req.expenseDate(), req.receiptReference());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success("Expense logged", toExpenseResponse(e)));
     }

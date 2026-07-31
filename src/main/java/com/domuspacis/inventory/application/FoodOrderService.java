@@ -84,19 +84,30 @@ public class FoodOrderService {
         FoodOrder order = findById(orderId);
         if (order.getStatus() == FoodOrderStatus.CANCELLED)
             throw new BusinessRuleViolationException("Cancelled orders cannot be updated");
+        // Idempotent: no-op if already in the target status
+        if (order.getStatus() == newStatus) {
+            log.info("Food order {} already has status {}, no change", orderId, newStatus);
+            return order;
+        }
+
         order.setStatus(newStatus);
 
-        // When delivered, record revenue transaction
+        // When delivered, record revenue transaction (idempotent)
         if (newStatus == FoodOrderStatus.DELIVERED) {
-            RevenueTransaction rt = RevenueTransaction.builder()
-                    .sourceType(RevenueSourceType.FOOD_SERVICE)
-                    .sourceId(order.getId())
-                    .amount(order.getTotalAmount())
-                    .currency("RWF")
-                    .transactionDate(LocalDate.now())
-                    .description("Food order delivered to: " + order.getDeliveryLocation())
-                    .build();
-            revenueTransactionRepository.save(rt);
+            if (revenueTransactionRepository.findBySourceTypeAndSourceId(
+                    RevenueSourceType.FOOD_SERVICE, order.getId()).isPresent()) {
+                log.info("Revenue transaction already exists for food order {}, skipping", order.getId());
+            } else {
+                RevenueTransaction rt = RevenueTransaction.builder()
+                        .sourceType(RevenueSourceType.FOOD_SERVICE)
+                        .sourceId(order.getId())
+                        .amount(order.getTotalAmount())
+                        .currency("RWF")
+                        .transactionDate(LocalDate.now())
+                        .description("Food order delivered to: " + order.getDeliveryLocation())
+                        .build();
+                revenueTransactionRepository.save(rt);
+            }
         }
         return foodOrderRepository.save(order);
     }

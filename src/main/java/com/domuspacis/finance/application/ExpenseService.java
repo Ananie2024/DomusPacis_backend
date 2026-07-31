@@ -25,13 +25,13 @@ public class ExpenseService {
 
     public Expense logExpense(ExpenseCategory category, String description,
                               BigDecimal amount, LocalDate date,
-                              UUID approvedBy, String receiptRef) {
+                              String receiptRef) {
         Expense expense = Expense.builder()
                 .category(category)
                 .description(description)
                 .amount(amount)
                 .expenseDate(date)
-                .approvedBy(approvedBy)
+                .approvedBy(null)
                 .receiptReference(receiptRef)
                 .build();
         return expenseRepository.save(expense);

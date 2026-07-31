@@ -40,6 +40,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
 
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final ClientIpResolver clientIpResolver;
 
     @Value("${app.rate-limit.login.max-requests-per-minute:5}")
     private int maxRequestsPerMinute;
@@ -66,7 +67,7 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         // ── Layer 1: IP-based rate limiting ──────────────────────────────
-        String clientIp = resolveClientIp(request);
+        String clientIp = clientIpResolver.resolveClientIp(request);
         Bucket bucket = ipBuckets.computeIfAbsent(clientIp, this::newBucket);
 
         if (!bucket.tryConsume(1)) {
@@ -157,17 +158,6 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
         }
     }
 
-    private String resolveClientIp(HttpServletRequest request) {
-        String xf = request.getHeader("X-Forwarded-For");
-        if (xf != null && !xf.isBlank()) {
-            return xf.split(",")[0].trim();
-        }
-        String xri = request.getHeader("X-Real-IP");
-        if (xri != null && !xri.isBlank()) {
-            return xri;
-        }
-        return request.getRemoteAddr();
-    }
 
     private Bucket newBucket(String ip) {
         Bandwidth limit = Bandwidth.classic(

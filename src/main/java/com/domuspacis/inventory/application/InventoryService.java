@@ -96,10 +96,12 @@ public class InventoryService {
     @Audited("APPROVE_STOCK_MOVEMENT")
     public StockMovement recordMovement(UUID itemId, MovementType type,
                                          BigDecimal quantity, String note, UUID recordedById) {
-        InventoryItem item = itemRepository.findById(itemId)
+        InventoryItem item = itemRepository.findByIdWithLock(itemId)
                 .orElseThrow(() -> new ResourceNotFoundException("InventoryItem", itemId));
 
-        if (quantity.compareTo(BigDecimal.ZERO) <= 0)
+        // For ADJUSTMENT movements, quantity is the new absolute level, so zero is allowed
+        // For other movement types (RECEIPT, CONSUMPTION, WASTE), quantity must be positive
+        if (type != MovementType.ADJUSTMENT && quantity.compareTo(BigDecimal.ZERO) <= 0)
             throw new BusinessRuleViolationException("Quantity must be positive");
 
         // Update stock level

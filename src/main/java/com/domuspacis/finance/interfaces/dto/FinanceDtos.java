@@ -43,7 +43,6 @@ public final class FinanceDtos {
         String description,
         @NotNull @Positive BigDecimal amount,
         @NotNull LocalDate expenseDate,
-        UUID approvedBy,
         String receiptReference
     ) {}
 
