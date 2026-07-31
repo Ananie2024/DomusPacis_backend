@@ -29,8 +29,13 @@ public class PayrollService {
     private final PayrollRepository  payrollRepository;
     private final EmployeeRepository employeeRepository;
 
-    /** Withholding tax rate for Rwanda (PAYE) – configurable in future via TaxRuleConfig */
-    private static final BigDecimal PAYE_RATE       = new BigDecimal("0.30");
+    // Rwanda PAYE progressive bands (monthly, 2024/2025)
+    private static final BigDecimal BAND_1_CEILING  = new BigDecimal("360000");
+    private static final BigDecimal BAND_2_CEILING  = new BigDecimal("720000");
+    private static final BigDecimal BAND_1_RATE     = BigDecimal.ZERO;
+    private static final BigDecimal BAND_2_RATE     = new BigDecimal("0.20");
+    private static final BigDecimal BAND_3_RATE     = new BigDecimal("0.30");
+
     private static final BigDecimal RSSB_EMPLOYEE   = new BigDecimal("0.05");
     private static final BigDecimal RSSB_EMPLOYER   = new BigDecimal("0.05");
 
@@ -46,11 +51,12 @@ public class PayrollService {
 
         BigDecimal gross       = employee.getBaseSalary() != null
                                  ? employee.getBaseSalary() : BigDecimal.ZERO;
-        BigDecimal rssbDed     = gross.multiply(RSSB_EMPLOYEE).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal taxableInc  = gross.subtract(rssbDed);
-        BigDecimal taxWithheld = taxableInc.multiply(PAYE_RATE).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal totalDed    = rssbDed.add(taxWithheld);
-        BigDecimal net         = gross.subtract(totalDed).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal rssbDed         = gross.multiply(RSSB_EMPLOYEE).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal employerRssb    = gross.multiply(RSSB_EMPLOYER).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal taxableInc      = gross.subtract(rssbDed);
+        BigDecimal taxWithheld     = computeProgressivePaye(taxableInc);
+        BigDecimal totalDed        = rssbDed.add(taxWithheld);
+        BigDecimal net             = gross.subtract(totalDed).setScale(2, RoundingMode.HALF_UP);
 
         PayrollRecord record = PayrollRecord.builder()
                 .employee(employee)
@@ -60,6 +66,7 @@ public class PayrollService {
                 .deductions(totalDed)
                 .netSalary(net)
                 .taxWithheld(taxWithheld)
+                .employerRssbContribution(employerRssb)
                 .status(PayrollStatus.DRAFT)
                 .build();
 
@@ -123,6 +130,34 @@ public class PayrollService {
     @Transactional(readOnly = true)
     public BigDecimal totalNetPaidForMonth(YearMonth period) {
         return payrollRepository.totalNetPaidForMonth(period.getYear(), period.getMonthValue());
+    }
+
+    /**
+     * Compute Rwanda's progressive PAYE (monthly).
+     *   Band 1: 0 – 360,000 RWF  → 0%
+     *   Band 2: 360,001 – 720,000 → 20%
+     *   Band 3: > 720,000        → 30%
+     */
+    private BigDecimal computeProgressivePaye(BigDecimal taxableIncome) {
+        if (taxableIncome.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
+
+        BigDecimal tax = BigDecimal.ZERO;
+
+        // Band 2 portion (360,001 – 720,000)
+        if (taxableIncome.compareTo(BAND_1_CEILING) > 0) {
+            BigDecimal band2Amount = taxableIncome.min(BAND_2_CEILING).subtract(BAND_1_CEILING);
+            if (band2Amount.compareTo(BigDecimal.ZERO) > 0) {
+                tax = tax.add(band2Amount.multiply(BAND_2_RATE));
+            }
+        }
+
+        // Band 3 portion (> 720,000)
+        if (taxableIncome.compareTo(BAND_2_CEILING) > 0) {
+            BigDecimal band3Amount = taxableIncome.subtract(BAND_2_CEILING);
+            tax = tax.add(band3Amount.multiply(BAND_3_RATE));
+        }
+
+        return tax.setScale(2, RoundingMode.HALF_UP);
     }
 
     private PayrollRecord findById(UUID id) {

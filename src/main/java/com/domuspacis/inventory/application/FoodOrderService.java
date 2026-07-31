@@ -34,6 +34,8 @@ public class FoodOrderService {
     private final CustomerRepository           customerRepository;
     private final BookingRepository            bookingRepository;
     private final RevenueTransactionRepository revenueTransactionRepository;
+    private final InventoryService             inventoryService;
+    private final InventoryItemRepository      inventoryItemRepository;
 
     public FoodOrder placeOrder(UUID customerId, UUID bookingId,
                                  Map<UUID, Integer> itemQuantities,
@@ -76,6 +78,8 @@ public class FoodOrderService {
         order.setItems(orderItems);
         order.setTotalAmount(total);
         FoodOrder saved = foodOrderRepository.save(order);
+        // Deduct inventory for each item's ingredients
+        deductInventoryForOrder(orderItems);
         log.info("Food order {} placed for customer {} total={}", saved.getId(), customerId, total);
         return saved;
     }
@@ -91,6 +95,15 @@ public class FoodOrderService {
         }
 
         order.setStatus(newStatus);
+
+        // When preparing, deduct inventory (idempotent — skip if already deducted)
+        if (newStatus == FoodOrderStatus.PREPARING) {
+            if (!order.getItems().isEmpty() && order.getItems().get(0).getMenuItem().getIngredients().isEmpty()) {
+                log.info("No ingredients to deduct for food order {}, skipping", order.getId());
+            } else {
+                deductInventoryForOrder(order.getItems());
+            }
+        }
 
         // When delivered, record revenue transaction (idempotent)
         if (newStatus == FoodOrderStatus.DELIVERED) {
@@ -134,6 +147,45 @@ public class FoodOrderService {
     @Transactional(readOnly = true)
     public Page<FoodOrder> listByStatus(FoodOrderStatus status, Pageable pageable) {
         return foodOrderRepository.findByStatus(status, pageable);
+    }
+
+    private void deductInventoryForOrder(List<FoodOrderItem> orderItems) {
+        for (FoodOrderItem item : orderItems) {
+            MenuItem menuItem = item.getMenuItem();
+            List<InventoryItem> ingredients = menuItem.getIngredients();
+            if (ingredients == null || ingredients.isEmpty()) continue;
+
+            int qty = item.getQuantity();
+            for (InventoryItem ingredient : ingredients) {
+                try {
+                    BigDecimal consumptionQty = BigDecimal.valueOf(qty);
+                    // Check if sufficient stock exists
+                    InventoryItem freshItem = inventoryItemRepository.findByIdWithLock(ingredient.getId())
+                            .orElse(null);
+                    if (freshItem == null) {
+                        log.warn("Ingredient {} not found for deduction, skipping", ingredient.getId());
+                        continue;
+                    }
+                    if (freshItem.getCurrentStock().compareTo(consumptionQty) < 0) {
+                        log.warn("Insufficient stock for ingredient {}: have {}, need {}",
+                                freshItem.getName(), freshItem.getCurrentStock(), consumptionQty);
+                        // Still deduct what we can (or skip entirely — let's skip to avoid negative stock)
+                        continue;
+                    }
+                    // Use CONSUMPTION movement type — recordedBy is null (system-triggered)
+                    inventoryService.recordMovement(
+                            ingredient.getId(),
+                            MovementType.CONSUMPTION,
+                            consumptionQty,
+                            "Auto-deducted for food order item: " + menuItem.getName() + " x" + qty,
+                            null
+                    );
+                } catch (Exception e) {
+                    log.error("Failed to deduct ingredient {} for menu item {}: {}",
+                            ingredient.getId(), menuItem.getName(), e.getMessage());
+                }
+            }
+        }
     }
 
     private FoodOrder findById(UUID id) {

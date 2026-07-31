@@ -21,6 +21,7 @@ public class PayrollRecord extends BaseEntity {
     @Column(name = "deductions", nullable = false, precision = 12, scale = 2) @Builder.Default private BigDecimal deductions = BigDecimal.ZERO;
     @Column(name = "net_salary", nullable = false, precision = 12, scale = 2) private BigDecimal netSalary;
     @Column(name = "tax_withheld", nullable = false, precision = 12, scale = 2) @Builder.Default private BigDecimal taxWithheld = BigDecimal.ZERO;
+    @Column(name = "employer_rssb_contribution", nullable = false, precision = 12, scale = 2) @Builder.Default private BigDecimal employerRssbContribution = BigDecimal.ZERO;
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20) @Builder.Default private PayrollStatus status = PayrollStatus.DRAFT;
     @Column(name = "paid_at") private Instant paidAt;

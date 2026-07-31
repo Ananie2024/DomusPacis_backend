@@ -8,6 +8,7 @@ import com.domuspacis.customer.interfaces.dto.CustomerDtos.*;
 import com.domuspacis.shared.exception.BusinessRuleViolationException;
 import com.domuspacis.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -91,7 +92,13 @@ public class CustomerService {
 
     public void delete(UUID id) {
         if (!customerRepository.existsById(id)) throw new ResourceNotFoundException("Customer", id);
-        customerRepository.deleteById(id);
+        try {
+            customerRepository.deleteById(id);
+        } catch (DataIntegrityViolationException e) {
+            throw new BusinessRuleViolationException(
+                    "Cannot delete customer " + id + " because they have existing bookings or references. " +
+                    "Please remove or reassociate those records first.");
+        }
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

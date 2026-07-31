@@ -84,6 +84,25 @@ public class PaymentService {
         if (payment.getStatus() != Payment.PaymentStatus.PAID)
             throw new BusinessRuleViolationException("Only PAID payments can be refunded");
         payment.setStatus(Payment.PaymentStatus.REFUNDED);
+
+        // Reverse the revenue transaction: create a negative entry to offset the original
+        Booking booking = payment.getBooking();
+        if (revenueTransactionRepository.findBySourceTypeAndSourceId(
+                RevenueSourceType.BOOKING, booking.getId()).isPresent()) {
+            RevenueTransaction reversal = RevenueTransaction.builder()
+                    .sourceType(RevenueSourceType.BOOKING)
+                    .sourceId(booking.getId())
+                    .amount(payment.getAmount().negate())
+                    .currency(payment.getCurrency())
+                    .transactionDate(LocalDate.now())
+                    .description("Refund reversal for booking: " + booking.getServiceAsset().getName())
+                    .build();
+            revenueTransactionRepository.save(reversal);
+            log.info("Revenue reversal recorded for booking {} amount {}", booking.getId(), payment.getAmount());
+        } else {
+            log.warn("No revenue transaction found to reverse for booking {}", booking.getId());
+        }
+
         return paymentRepository.save(payment);
     }
 
