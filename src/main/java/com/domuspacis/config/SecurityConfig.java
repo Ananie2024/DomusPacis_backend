@@ -63,6 +63,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         // Booking public read/create
                         .requestMatchers(HttpMethod.GET, "/api/v1/service-assets/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/bookings/availability").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/menu-items/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/bookings").permitAll()
                         // Role-restricted endpoints

@@ -77,6 +77,10 @@ public class FoodOrderService {
 
         order.setItems(orderItems);
         order.setTotalAmount(total);
+
+        // Validate ingredient stock BEFORE saving — prevent orders that can't be fulfilled
+        validateStockAvailability(orderItems);
+
         FoodOrder saved = foodOrderRepository.save(order);
         // Deduct inventory for each item's ingredients
         deductInventoryForOrder(orderItems);
@@ -147,6 +151,36 @@ public class FoodOrderService {
     @Transactional(readOnly = true)
     public Page<FoodOrder> listByStatus(FoodOrderStatus status, Pageable pageable) {
         return foodOrderRepository.findByStatus(status, pageable);
+    }
+
+    /**
+     * Validates that all ingredients for all order items have sufficient stock.
+     * Throws BusinessRuleViolationException if any ingredient is insufficient.
+     */
+    private void validateStockAvailability(List<FoodOrderItem> orderItems) {
+        for (FoodOrderItem item : orderItems) {
+            MenuItem menuItem = item.getMenuItem();
+            List<InventoryItem> ingredients = menuItem.getIngredients();
+            if (ingredients == null || ingredients.isEmpty()) continue;
+
+            int qty = item.getQuantity();
+            for (InventoryItem ingredient : ingredients) {
+                InventoryItem freshItem = inventoryItemRepository.findByIdWithLock(ingredient.getId())
+                        .orElse(null);
+                if (freshItem == null) {
+                    throw new BusinessRuleViolationException(
+                            "Ingredient not found: " + ingredient.getId());
+                }
+                BigDecimal consumptionQty = BigDecimal.valueOf(qty);
+                if (freshItem.getCurrentStock().compareTo(consumptionQty) < 0) {
+                    throw new BusinessRuleViolationException(
+                            "Insufficient stock for " + freshItem.getName()
+                            + ": have " + freshItem.getCurrentStock()
+                            + ", need " + consumptionQty
+                            + " for " + menuItem.getName() + " x" + qty);
+                }
+            }
+        }
     }
 
     private void deductInventoryForOrder(List<FoodOrderItem> orderItems) {

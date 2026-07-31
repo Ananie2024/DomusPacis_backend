@@ -5,6 +5,7 @@ import com.domuspacis.shared.exception.BusinessRuleViolationException;
 import com.domuspacis.shared.exception.ResourceNotFoundException;
 import com.domuspacis.staff.domain.*;
 import com.domuspacis.staff.infrastructure.EmployeeRepository;
+import com.domuspacis.staff.infrastructure.PayeTaxBracketRepository;
 import com.domuspacis.staff.infrastructure.PayrollRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.List;
 import java.util.UUID;
@@ -26,15 +28,9 @@ import java.util.UUID;
 @Transactional
 public class PayrollService {
 
-    private final PayrollRepository  payrollRepository;
-    private final EmployeeRepository employeeRepository;
-
-    // Rwanda PAYE progressive bands (monthly, 2024/2025)
-    private static final BigDecimal BAND_1_CEILING  = new BigDecimal("360000");
-    private static final BigDecimal BAND_2_CEILING  = new BigDecimal("720000");
-    private static final BigDecimal BAND_1_RATE     = BigDecimal.ZERO;
-    private static final BigDecimal BAND_2_RATE     = new BigDecimal("0.20");
-    private static final BigDecimal BAND_3_RATE     = new BigDecimal("0.30");
+    private final PayrollRepository          payrollRepository;
+    private final EmployeeRepository         employeeRepository;
+    private final PayeTaxBracketRepository   payeTaxBracketRepository;
 
     private static final BigDecimal RSSB_EMPLOYEE   = new BigDecimal("0.05");
     private static final BigDecimal RSSB_EMPLOYER   = new BigDecimal("0.05");
@@ -133,28 +129,52 @@ public class PayrollService {
     }
 
     /**
-     * Compute Rwanda's progressive PAYE (monthly).
-     *   Band 1: 0 – 360,000 RWF  → 0%
-     *   Band 2: 360,001 – 720,000 → 20%
-     *   Band 3: > 720,000        → 30%
+     * Compute progressive PAYE using the database-backed tax brackets.
+     *
+     * Loads active brackets for the current date from the paye_tax_brackets table,
+     * then applies each bracket's rate to the portion of taxable income falling
+     * within that bracket's range. This replaces the previously hardcoded Rwanda
+     * PAYE bands (360,000 / 720,000 thresholds, 20% / 30% rates) with a
+     * configurable, versioned, auditable source of truth.
+     *
+     * The brackets table is seeded with the 2024/2025 Rwanda PAYE structure:
+     *   Band 1: 0 – 360,000 RWF       → 0%
+     *   Band 2: 360,001 – 720,000 RWF  → 20%
+     *   Band 3: > 720,000 RWF          → 30%
      */
     private BigDecimal computeProgressivePaye(BigDecimal taxableIncome) {
         if (taxableIncome.compareTo(BigDecimal.ZERO) <= 0) return BigDecimal.ZERO;
 
-        BigDecimal tax = BigDecimal.ZERO;
-
-        // Band 2 portion (360,001 – 720,000)
-        if (taxableIncome.compareTo(BAND_1_CEILING) > 0) {
-            BigDecimal band2Amount = taxableIncome.min(BAND_2_CEILING).subtract(BAND_1_CEILING);
-            if (band2Amount.compareTo(BigDecimal.ZERO) > 0) {
-                tax = tax.add(band2Amount.multiply(BAND_2_RATE));
-            }
+        List<PayeTaxBracket> brackets = payeTaxBracketRepository.findActiveBrackets(LocalDate.now());
+        if (brackets.isEmpty()) {
+            log.warn("No active PAYE tax brackets found for date {}; returning zero tax", LocalDate.now());
+            return BigDecimal.ZERO;
         }
 
-        // Band 3 portion (> 720,000)
-        if (taxableIncome.compareTo(BAND_2_CEILING) > 0) {
-            BigDecimal band3Amount = taxableIncome.subtract(BAND_2_CEILING);
-            tax = tax.add(band3Amount.multiply(BAND_3_RATE));
+        BigDecimal tax = BigDecimal.ZERO;
+        BigDecimal remaining = taxableIncome;
+
+        for (PayeTaxBracket bracket : brackets) {
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) break;
+
+            BigDecimal bracketLower = bracket.getLowerBound();
+            BigDecimal bracketUpper = bracket.getUpperBound();
+
+            // Determine the portion of remaining income that falls in this bracket
+            BigDecimal bracketPortion;
+            if (bracketUpper == null) {
+                // No upper bound — remaining income all falls in this bracket
+                bracketPortion = remaining;
+            } else {
+                // Upper bound exists — cap at the bracket width
+                BigDecimal bracketWidth = bracketUpper.subtract(bracketLower).add(BigDecimal.ONE);
+                bracketPortion = remaining.min(bracketWidth);
+            }
+
+            if (bracketPortion.compareTo(BigDecimal.ZERO) > 0) {
+                tax = tax.add(bracketPortion.multiply(bracket.getRate()));
+                remaining = remaining.subtract(bracketPortion);
+            }
         }
 
         return tax.setScale(2, RoundingMode.HALF_UP);
