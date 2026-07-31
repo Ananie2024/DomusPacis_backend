@@ -42,6 +42,18 @@ public class StatusCapturingResponseWrapper extends HttpServletResponseWrapper {
     }
 
     @Override
+    public void sendRedirect(String location) {
+        // Spring Security's ExceptionTranslationFilter uses sendRedirect for 403.
+        // Capture it as 403 so the rate-limit filter can detect auth failures.
+        this.httpStatus = HttpServletResponse.SC_FORBIDDEN;
+        try {
+            super.sendRedirect(location);
+        } catch (java.io.IOException e) {
+            // Ignore – we only care about capturing the status
+        }
+    }
+
+    @Override
     public int getStatus() {
         return this.httpStatus;
     }

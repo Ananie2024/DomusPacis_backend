@@ -138,6 +138,7 @@ class BookingServiceTest {
         );
 
         when(serviceAssetRepository.findById(assetId)).thenReturn(Optional.of(testAsset));
+        when(serviceAssetRepository.findByIdWithLock(assetId)).thenReturn(Optional.of(testAsset));
         when(customerRepository.findByEmail("jean@test.rw")).thenReturn(Optional.empty());
         when(customerRepository.save(any(Customer.class))).thenReturn(testCustomer);
         when(availabilityService.isAvailable(assetId, request.checkInDate(), request.checkOutDate())).thenReturn(true);
@@ -167,6 +168,7 @@ class BookingServiceTest {
         );
 
         when(serviceAssetRepository.findById(assetId)).thenReturn(Optional.of(testAsset));
+        when(serviceAssetRepository.findByIdWithLock(assetId)).thenReturn(Optional.of(testAsset));
         when(customerRepository.findByEmail("jean@test.rw")).thenReturn(Optional.of(testCustomer));
         when(availabilityService.isAvailable(assetId, request.checkInDate(), request.checkOutDate())).thenReturn(true);
         when(bookingRepository.save(any(Booking.class))).thenReturn(testBooking);
@@ -214,6 +216,7 @@ class BookingServiceTest {
         );
 
         when(serviceAssetRepository.findById(assetId)).thenReturn(Optional.of(testAsset));
+        when(serviceAssetRepository.findByIdWithLock(assetId)).thenReturn(Optional.of(testAsset));
 
         assertThrows(BusinessRuleViolationException.class, () -> bookingService.createBooking(request));
     }
@@ -234,6 +237,7 @@ class BookingServiceTest {
         );
 
         when(serviceAssetRepository.findById(assetId)).thenReturn(Optional.of(testAsset));
+        when(serviceAssetRepository.findByIdWithLock(assetId)).thenReturn(Optional.of(testAsset));
         when(availabilityService.isAvailable(assetId, request.checkInDate(), request.checkOutDate())).thenReturn(false);
 
         assertThrows(BookingConflictException.class, () -> bookingService.createBooking(request));
@@ -474,6 +478,7 @@ class BookingServiceTest {
         );
 
         when(serviceAssetRepository.findById(assetId)).thenReturn(Optional.of(testAsset));
+        when(serviceAssetRepository.findByIdWithLock(assetId)).thenReturn(Optional.of(testAsset));
         when(customerRepository.findByEmail("jean@test.rw")).thenReturn(Optional.of(testCustomer));
         when(availabilityService.isAvailable(assetId, checkIn, checkOut)).thenReturn(true);
         when(bookingRepository.save(any(Booking.class))).thenAnswer(invocation -> {

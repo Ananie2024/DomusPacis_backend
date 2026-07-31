@@ -78,7 +78,6 @@ jwt:
 app:
   cors:
     allowed-origins: ${CORS_ORIGINS:*}
-
   rate-limit:
     login:
       max-requests-per-minute: 5

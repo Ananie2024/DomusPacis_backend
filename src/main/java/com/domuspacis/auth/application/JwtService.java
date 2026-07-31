@@ -2,6 +2,7 @@ package com.domuspacis.auth.application;
 
 import com.domuspacis.aop.annotation.SensitiveParam;
 import com.domuspacis.auth.domain.TokenBlacklist;
+import com.domuspacis.auth.domain.User;
 import com.domuspacis.auth.infrastructure.TokenBlacklistRepository;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
@@ -41,6 +42,8 @@ public class JwtService {
 
     private static final String TOKEN_TYPE_ACCESS = "access";
     private static final String TOKEN_TYPE_REFRESH = "refresh";
+    private static final String CLAIM_TOKEN_TYPE = "typ";
+    private static final String CLAIM_PASSWORD_CHANGED_AT = "pca";
 
     public String extractUsername(@SensitiveParam String token) {
         return extractClaim(token, Claims::getSubject);
@@ -56,14 +59,24 @@ public class JwtService {
     }
 
     public String generateToken(Map<String, Object> extraClaims, UserDetails userDetails) {
-        extraClaims.put("typ", TOKEN_TYPE_ACCESS);
+        extraClaims.put(CLAIM_TOKEN_TYPE, TOKEN_TYPE_ACCESS);
+        embedPasswordChangedAt(extraClaims, userDetails);
         return buildToken(extraClaims, userDetails, jwtExpiration);
     }
 
     public String generateRefreshToken(UserDetails userDetails) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("typ", TOKEN_TYPE_REFRESH);
+        claims.put(CLAIM_TOKEN_TYPE, TOKEN_TYPE_REFRESH);
+        embedPasswordChangedAt(claims, userDetails);
         return buildToken(claims, userDetails, refreshExpiration);
+    }
+
+    private void embedPasswordChangedAt(Map<String, Object> claims, UserDetails userDetails) {
+        if (userDetails instanceof User user) {
+            claims.put(CLAIM_PASSWORD_CHANGED_AT, user.getPasswordChangedAt().toEpochMilli());
+        } else {
+            claims.put(CLAIM_PASSWORD_CHANGED_AT, Instant.now().toEpochMilli());
+        }
     }
 
     private String buildToken(Map<String, Object> extraClaims, UserDetails userDetails, long expiration) {
@@ -90,7 +103,7 @@ public class JwtService {
         try {
             final Claims claims = extractAllClaims(token);
             final String username = claims.getSubject();
-            final String tokenType = claims.get("typ", String.class);
+            final String tokenType = claims.get(CLAIM_TOKEN_TYPE, String.class);
 
             // Validate token type
             if (!expectedType.equals(tokenType)) {
@@ -114,6 +127,16 @@ public class JwtService {
                 return false;
             }
 
+            // Validate password_changed_at — reject tokens issued before the last password change
+            Long tokenPca = claims.get(CLAIM_PASSWORD_CHANGED_AT, Long.class);
+            if (tokenPca != null && userDetails instanceof User user) {
+                long dbPca = user.getPasswordChangedAt().toEpochMilli();
+                if (dbPca > tokenPca) {
+                    log.warn("Token rejected: password changed after token issuance for user {}", username);
+                    return false;
+                }
+            }
+
             // Check blacklist
             String tokenHash = hashToken(token);
             if (tokenBlacklistRepository.existsByTokenHash(tokenHash)) {
@@ -133,7 +156,7 @@ public class JwtService {
             final Claims claims = extractAllClaims(token);
             String tokenHash = hashToken(token);
             String userId = claims.getSubject();
-            String tokenType = claims.get("typ", String.class);
+            String tokenType = claims.get(CLAIM_TOKEN_TYPE, String.class);
             Instant expiresAt = claims.getExpiration().toInstant();
 
             TokenBlacklist entry = TokenBlacklist.builder()
@@ -150,14 +173,6 @@ public class JwtService {
         } catch (Exception e) {
             log.warn("Failed to invalidate token: {}", e.getMessage());
         }
-    }
-
-    public void invalidateAllUserTokens(String userEmail, String reason) {
-        // We can't enumerate all tokens for a user since they're stateless,
-        // but we can invalidate by adding a user-level blacklist marker.
-        // For now, this is a best-effort approach — the token-specific
-        // invalidation handles the common case (logout, password reset).
-        log.info("User-level token invalidation requested: user={} reason={}", userEmail, reason);
     }
 
     /**

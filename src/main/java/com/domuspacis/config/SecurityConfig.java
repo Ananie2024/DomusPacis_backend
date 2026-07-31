@@ -91,6 +91,7 @@ public class SecurityConfig {
         if (origins.contains("*")) {
             configuration.setAllowedOrigins(List.of(
                     "https://domuspaciskigali.vercel.app",
+                    "https://Ananie2024-domuspacis.hf.space",
                     "http://localhost:3000"
             ));
         } else {

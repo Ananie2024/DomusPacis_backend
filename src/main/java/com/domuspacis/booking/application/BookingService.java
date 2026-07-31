@@ -52,6 +52,14 @@ public class BookingService {
         ServiceAsset asset = serviceAssetRepository.findById(req.serviceAssetId())
                 .orElseThrow(() -> new ResourceNotFoundException("ServiceAsset", req.serviceAssetId()));
 
+        // Acquire a pessimistic write lock on the asset row to prevent TOCTOU race conditions.
+        // This serializes concurrent booking attempts for the same asset:
+        // Transaction A holds the lock → Transaction B blocks on this call until A commits.
+        // Once A commits (or rolls back), B's availability check sees the newly persisted booking
+        // and correctly rejects the overlap. Without this, two concurrent requests can both pass
+        // the isAvailable() check and both get saved — a double-booking bug.
+        serviceAssetRepository.findByIdWithLock(asset.getId());
+
         if (!req.checkOutDate().isAfter(req.checkInDate()))
             throw new BusinessRuleViolationException("Check-out must be after check-in");
 

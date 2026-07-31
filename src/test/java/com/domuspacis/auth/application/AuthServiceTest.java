@@ -55,7 +55,6 @@ class AuthServiceTest {
 
     @Test
     void login_existingUser_wrongPassword_throwsBadCredentials() {
-        when(userRepository.findByEmail("test@example.com")).thenReturn(Optional.of(testUser));
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 
@@ -66,7 +65,6 @@ class AuthServiceTest {
 
     @Test
     void login_nonexistentUser_throwsBadCredentials_notResourceNotFound() {
-        when(userRepository.findByEmail("nonexistent@example.com")).thenReturn(Optional.empty());
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
                 .thenThrow(new BadCredentialsException("Bad credentials"));
 

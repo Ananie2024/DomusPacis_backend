@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -138,7 +139,6 @@ public class AuthService {
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
         user.setIsActive(false);
         userRepository.save(user);
-        jwtService.invalidateAllUserTokens(user.getEmail(), "USER_DEACTIVATED");
         log.info("User deactivated: {}", user.getEmail());
     }
 
@@ -203,13 +203,11 @@ public class AuthService {
         passwordResetToken.setUsedAt(LocalDateTime.now());
         passwordResetTokenRepository.save(passwordResetToken);
 
-        // Reset the password
+        // Reset the password and bump password_changed_at
         User user = passwordResetToken.getUser();
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setPasswordChangedAt(Instant.now());
         userRepository.save(user);
-
-        // Invalidate all existing tokens for this user (password changed)
-        jwtService.invalidateAllUserTokens(user.getEmail(), "PASSWORD_RESET");
 
         log.info("Password reset completed for user: {}", user.getEmail());
     }
@@ -218,6 +216,7 @@ public class AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("User", userId));
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setPasswordChangedAt(Instant.now());
         userRepository.save(user);
     }
 
