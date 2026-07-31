@@ -25,6 +25,8 @@ public class DomusPacisApplication {
         if (!envFile.exists()) {
             envFile = new File(".env");
         }
+        System.out.println("DEBUG: Looking for .env file at: " + envFile.getAbsolutePath());
+        System.out.println("DEBUG: .env file exists: " + envFile.exists());
         if (envFile.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(envFile))) {
                 String line;
@@ -39,10 +41,12 @@ public class DomusPacisApplication {
                         String val = line.substring(eqIndex + 1).trim();
                         if (System.getProperty(key) == null && System.getenv(key) == null) {
                             System.setProperty(key, val);
+                            System.out.println("DEBUG: Loaded env var: " + key + "=" + val);
                         }
                     }
                 }
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                System.err.println("DEBUG: Error loading .env file: " + e.getMessage());
             }
         }
     }
