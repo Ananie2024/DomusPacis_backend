@@ -43,9 +43,10 @@ public class StatusCapturingResponseWrapper extends HttpServletResponseWrapper {
 
     @Override
     public void sendRedirect(String location) {
-        // Spring Security's ExceptionTranslationFilter uses sendRedirect for 403.
-        // Capture it as 403 so the rate-limit filter can detect auth failures.
-        this.httpStatus = HttpServletResponse.SC_FORBIDDEN;
+        // A redirect is a 302 (Found).  With a proper AuthenticationEntryPoint
+        // configured, Spring Security no longer uses sendRedirect for auth
+        // failures — it writes a JSON 401 directly.  Capture the real status.
+        this.httpStatus = HttpServletResponse.SC_FOUND;
         try {
             super.sendRedirect(location);
         } catch (java.io.IOException e) {

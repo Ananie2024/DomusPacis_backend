@@ -105,29 +105,37 @@ public class LoginRateLimitFilter extends OncePerRequestFilter {
         filterChain.doFilter(wrappedRequest, responseWrapper);
 
         // ── Post-authentication: track success/failure ───────────────────
+        // This is best-effort bookkeeping.  If the DB write fails we must NOT
+        // let it corrupt the already-written response (e.g. turn a 401 into a
+        // 500), so every failure is caught and logged.
         if (email != null) {
-            int status = responseWrapper.getStatus();
-            if (status == HttpServletResponse.SC_OK) {
-                // Successful login → reset failed attempts
-                userRepository.findByEmail(email).ifPresent(u -> {
-                    if (u.getFailedLoginAttempts() > 0 || u.getLockedUntil() != null) {
-                        u.setFailedLoginAttempts(0);
-                        u.setLockedUntil(null);
+            try {
+                int status = responseWrapper.getStatus();
+                if (status == HttpServletResponse.SC_OK) {
+                    // Successful login → reset failed attempts
+                    userRepository.findByEmail(email).ifPresent(u -> {
+                        if (u.getFailedLoginAttempts() > 0 || u.getLockedUntil() != null) {
+                            u.setFailedLoginAttempts(0);
+                            u.setLockedUntil(null);
+                            userRepository.save(u);
+                            log.info("Login succeeded – reset lockout state for: {}", email);
+                        }
+                    });
+                } else if (status == HttpServletResponse.SC_UNAUTHORIZED) {
+                    // Failed login → increment failed attempts
+                    userRepository.findByEmail(email).ifPresent(u -> {
+                        int attempts = u.getFailedLoginAttempts() + 1;
+                        u.setFailedLoginAttempts(attempts);
+                        if (attempts >= maxFailedAttempts) {
+                            u.setLockedUntil(LocalDateTime.now().plusMinutes(lockoutDurationMinutes));
+                            log.warn("Account locked after {} failed attempts: {}", attempts, email);
+                        }
                         userRepository.save(u);
-                        log.info("Login succeeded – reset lockout state for: {}", email);
-                    }
-                });
-            } else if (status == HttpServletResponse.SC_UNAUTHORIZED) {
-                // Failed login → increment failed attempts
-                userRepository.findByEmail(email).ifPresent(u -> {
-                    int attempts = u.getFailedLoginAttempts() + 1;
-                    u.setFailedLoginAttempts(attempts);
-                    if (attempts >= maxFailedAttempts) {
-                        u.setLockedUntil(LocalDateTime.now().plusMinutes(lockoutDurationMinutes));
-                        log.warn("Account locked after {} failed attempts: {}", attempts, email);
-                    }
-                    userRepository.save(u);
-                });
+                    });
+                }
+            } catch (Exception e) {
+                // Never let lockout bookkeeping break the login response.
+                log.error("Failed to update login attempt tracking for {}: {}", email, e.getMessage());
             }
         }
     }

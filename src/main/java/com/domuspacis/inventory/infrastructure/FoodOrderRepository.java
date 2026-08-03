@@ -9,6 +9,8 @@ import java.util.UUID;
 @Repository
 public interface FoodOrderRepository extends JpaRepository<FoodOrder, UUID> {
     Page<FoodOrder> findByCustomerId(UUID customerId, Pageable pageable);
+    long countByCustomerId(UUID customerId);
     Page<FoodOrder> findByStatus(FoodOrderStatus status, Pageable pageable);
     Page<FoodOrder> findByBookingId(UUID bookingId, Pageable pageable);
+    long countByBookingId(UUID bookingId);
 }

@@ -7,6 +7,11 @@ import com.domuspacis.booking.infrastructure.ServiceAssetRepository;
 import com.domuspacis.booking.interfaces.dto.BookingDtos.*;
 import com.domuspacis.customer.domain.Customer;
 import com.domuspacis.customer.infrastructure.CustomerRepository;
+import com.domuspacis.finance.domain.RevenueSourceType;
+import com.domuspacis.finance.infrastructure.InvoiceRepository;
+import com.domuspacis.finance.infrastructure.PaymentRepository;
+import com.domuspacis.finance.infrastructure.RevenueTransactionRepository;
+import com.domuspacis.inventory.infrastructure.FoodOrderRepository;
 import com.domuspacis.shared.exception.BookingConflictException;
 import com.domuspacis.shared.exception.BusinessRuleViolationException;
 import com.domuspacis.shared.exception.ResourceNotFoundException;
@@ -37,6 +42,10 @@ public class BookingService {
     private final CustomerRepository      customerRepository;
     private final AvailabilityService     availabilityService;
     private final ApplicationEventPublisher eventPublisher;
+    private final FoodOrderRepository     foodOrderRepository;
+    private final PaymentRepository       paymentRepository;
+    private final InvoiceRepository       invoiceRepository;
+    private final RevenueTransactionRepository revenueTransactionRepository;
 
     public BookingResponse createBooking(CreateBookingRequest req) {
         Customer customer = customerRepository.findByEmail(req.email())
@@ -129,6 +138,41 @@ public class BookingService {
         Booking booking = findById(bookingId);
         booking.setStatus(newStatus);
         return toResponse(bookingRepository.save(booking));
+    }
+
+    @Audited("DELETE_BOOKING")
+    public void deleteBooking(UUID bookingId) {
+        Booking booking = findById(bookingId);
+
+        // Pre-flight checks to return clear, actionable errors instead of
+        // opaque foreign-key violations at commit time.
+        long foodOrders = foodOrderRepository.countByBookingId(bookingId);
+        if (foodOrders > 0) {
+            throw new BusinessRuleViolationException(
+                "Cannot delete this booking because it has " + foodOrders +
+                " food order(s) on record. Delete or reassign those orders first.");
+        }
+
+        if (paymentRepository.findByBookingId(bookingId).isPresent()) {
+            throw new BusinessRuleViolationException(
+                "Cannot delete this booking because a payment has been recorded against it. " +
+                "Refund or void the payment first.");
+        }
+
+        if (invoiceRepository.findByBookingId(bookingId).isPresent()) {
+            throw new BusinessRuleViolationException(
+                "Cannot delete this booking because an invoice has been generated for it. " +
+                "Void the invoice first.");
+        }
+
+        // Remove any revenue transactions tied to this booking (e.g. from a
+        // previously recorded payment that was later refunded).
+        revenueTransactionRepository.findBySourceTypeAndSourceId(
+                RevenueSourceType.BOOKING, bookingId)
+            .ifPresent(revenueTransactionRepository::delete);
+
+        bookingRepository.delete(booking);
+        log.info("Booking deleted: {}", bookingId);
     }
 
     @Audited("OVERRIDE_BOOKING_DATES")

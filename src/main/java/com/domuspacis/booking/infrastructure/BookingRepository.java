@@ -13,6 +13,7 @@ import java.util.UUID;
 @Repository
 public interface BookingRepository extends JpaRepository<Booking, UUID> {
     Page<Booking> findByCustomerId(UUID customerId, Pageable pageable);
+    long countByCustomerId(UUID customerId);
     Page<Booking> findByStatus(BookingStatus status, Pageable pageable);
     Page<Booking> findByServiceAssetId(UUID assetId, Pageable pageable);
     @Query("SELECT b FROM Booking b WHERE b.serviceAsset.id = :assetId AND b.status NOT IN ('CANCELLED','COMPLETED') AND b.checkInDate < :checkOut AND b.checkOutDate > :checkIn")

@@ -2,13 +2,14 @@ package com.domuspacis.customer.application;
 
 import com.domuspacis.auth.domain.User;
 import com.domuspacis.auth.infrastructure.UserRepository;
+import com.domuspacis.booking.infrastructure.BookingRepository;
 import com.domuspacis.customer.domain.Customer;
 import com.domuspacis.customer.infrastructure.CustomerRepository;
 import com.domuspacis.customer.interfaces.dto.CustomerDtos.*;
+import com.domuspacis.inventory.infrastructure.FoodOrderRepository;
 import com.domuspacis.shared.exception.BusinessRuleViolationException;
 import com.domuspacis.shared.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +26,8 @@ public class CustomerService {
 
     private final CustomerRepository customerRepository;
     private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
+    private final FoodOrderRepository foodOrderRepository;
 
     public CustomerResponse createCustomer(CreateCustomerRequest req) {
         if (req.email() != null && customerRepository.existsByEmail(req.email())) {
@@ -92,13 +95,25 @@ public class CustomerService {
 
     public void delete(UUID id) {
         if (!customerRepository.existsById(id)) throw new ResourceNotFoundException("Customer", id);
-        try {
-            customerRepository.deleteById(id);
-        } catch (DataIntegrityViolationException e) {
+
+        // Pre-flight check so we can return a clear, actionable error instead of a
+        // foreign-key violation surfacing at transaction-commit time.
+        long bookings = bookingRepository.countByCustomerId(id);
+        long foodOrders = foodOrderRepository.countByCustomerId(id);
+        if (bookings > 0 || foodOrders > 0) {
+            StringBuilder refs = new StringBuilder();
+            if (bookings > 0)  refs.append(bookings).append(" booking(s)");
+            if (bookings > 0 && foodOrders > 0) refs.append(" and ");
+            if (foodOrders > 0) refs.append(foodOrders).append(" food order(s)");
             throw new BusinessRuleViolationException(
-                    "Cannot delete customer " + id + " because they have existing bookings or references. " +
-                    "Please remove or reassociate those records first.");
+                "Cannot delete this customer because they have " + refs + " on record. " +
+                "Cancel or reassign those records before deleting the customer profile.");
         }
+
+        // Safety net: if any other FK references exist (e.g. added via migrations),
+        // map the DB constraint violation to a clear 409 CONFLICT response via
+        // GlobalExceptionHandler rather than an opaque 500.
+        customerRepository.deleteById(id);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

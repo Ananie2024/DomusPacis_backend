@@ -109,6 +109,14 @@ public class BookingController {
                 bookingService.cancelBooking(id, req != null ? req.reason() : null)));
     }
 
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Delete a booking (admin only)")
+    public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
+        bookingService.deleteBooking(id);
+        return ResponseEntity.ok(ApiResponse.success("Booking deleted", null));
+    }
+
     @PatchMapping("/{id}/override-dates")
     @PreAuthorize("hasAnyRole('ADMIN','MANAGER')")
     @Operation(summary = "Override booking dates (admin)")

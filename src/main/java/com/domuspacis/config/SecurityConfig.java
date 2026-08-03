@@ -17,6 +17,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -42,6 +43,7 @@ public class SecurityConfig {
     private final LoginRateLimitFilter loginRateLimitFilter;
     private final PasswordResetRateLimitFilter passwordResetRateLimitFilter;
     private final AuthenticationProvider authenticationProvider;
+    private final AuthenticationEntryPoint authenticationEntryPoint;
 
     @Value("${app.cors.allowed-origins}")
     private String allowedOrigins;
@@ -52,6 +54,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint))
                 .authorizeHttpRequests(auth -> auth
                         //allow preflight/OPTIONs
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -93,13 +96,20 @@ public class SecurityConfig {
 
         // Never allow wildcard with credentials — replace with explicit origin
         if (origins.contains("*")) {
-            configuration.setAllowedOrigins(List.of(
+            // Use setAllowedOriginPatterns instead of setAllowedOrigins so that
+            // wildcard patterns are supported even with allowCredentials=true.
+            // This covers production deployments plus common local-dev access
+            // methods (localhost, 127.0.0.1, and LAN IPs like 192.168.x.x).
+            configuration.setAllowedOriginPatterns(List.of(
                     "https://domuspaciskigali.vercel.app",
                     "https://Ananie2024-domuspacis.hf.space",
-                    "http://localhost:3000"
+                    "http://localhost:3000",
+                    "http://127.0.0.1:3000",
+                    "http://192.168.*.*:3000",
+                    "http://10.*.*.*:3000"
             ));
         } else {
-            configuration.setAllowedOrigins(origins);
+            configuration.setAllowedOriginPatterns(origins);
         }
 
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));

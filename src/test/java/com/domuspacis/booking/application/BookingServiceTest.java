@@ -9,6 +9,13 @@ import com.domuspacis.booking.infrastructure.ServiceAssetRepository;
 import com.domuspacis.booking.interfaces.dto.BookingDtos.CreateBookingRequest;
 import com.domuspacis.customer.domain.Customer;
 import com.domuspacis.customer.infrastructure.CustomerRepository;
+import com.domuspacis.finance.domain.Payment;
+import com.domuspacis.finance.domain.RevenueSourceType;
+import com.domuspacis.finance.domain.RevenueTransaction;
+import com.domuspacis.finance.infrastructure.InvoiceRepository;
+import com.domuspacis.finance.infrastructure.PaymentRepository;
+import com.domuspacis.finance.infrastructure.RevenueTransactionRepository;
+import com.domuspacis.inventory.infrastructure.FoodOrderRepository;
 import com.domuspacis.shared.exception.BookingConflictException;
 import com.domuspacis.shared.exception.BusinessRuleViolationException;
 import com.domuspacis.shared.exception.ResourceNotFoundException;
@@ -51,6 +58,10 @@ class BookingServiceTest {
     @Mock private CustomerRepository customerRepository;
     @Mock private AvailabilityService availabilityService;
     @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private FoodOrderRepository foodOrderRepository;
+    @Mock private PaymentRepository paymentRepository;
+    @Mock private InvoiceRepository invoiceRepository;
+    @Mock private RevenueTransactionRepository revenueTransactionRepository;
     @Mock private SecurityContext securityContext;
     @Mock private Authentication authentication;
 
@@ -333,6 +344,94 @@ class BookingServiceTest {
         when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(testBooking));
 
         assertThrows(BusinessRuleViolationException.class, () -> bookingService.cancelBooking(bookingId, "reason"));
+    }
+
+    @Test
+    @DisplayName("deleteBooking - deletes booking with no dependencies")
+    void deleteBooking_noDependencies_deletesSuccessfully() {
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(testBooking));
+        when(foodOrderRepository.countByBookingId(bookingId)).thenReturn(0L);
+        when(paymentRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
+        when(invoiceRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
+        when(revenueTransactionRepository.findBySourceTypeAndSourceId(
+                RevenueSourceType.BOOKING, bookingId)).thenReturn(Optional.empty());
+
+        bookingService.deleteBooking(bookingId);
+
+        verify(bookingRepository).delete(testBooking);
+    }
+
+    @Test
+    @DisplayName("deleteBooking - throws exception when booking has food orders")
+    void deleteBooking_withFoodOrders_throwsException() {
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(testBooking));
+        when(foodOrderRepository.countByBookingId(bookingId)).thenReturn(2L);
+
+        assertThrows(BusinessRuleViolationException.class,
+                () -> bookingService.deleteBooking(bookingId));
+
+        verify(bookingRepository, never()).delete(any(Booking.class));
+    }
+
+    @Test
+    @DisplayName("deleteBooking - throws exception when booking has a payment")
+    void deleteBooking_withPayment_throwsException() {
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(testBooking));
+        when(foodOrderRepository.countByBookingId(bookingId)).thenReturn(0L);
+        when(paymentRepository.findByBookingId(bookingId)).thenReturn(Optional.of(mock(Payment.class)));
+
+        assertThrows(BusinessRuleViolationException.class,
+                () -> bookingService.deleteBooking(bookingId));
+
+        verify(bookingRepository, never()).delete(any(Booking.class));
+    }
+
+    @Test
+    @DisplayName("deleteBooking - throws exception when booking has an invoice")
+    void deleteBooking_withInvoice_throwsException() {
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(testBooking));
+        when(foodOrderRepository.countByBookingId(bookingId)).thenReturn(0L);
+        when(paymentRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
+        when(invoiceRepository.findByBookingId(bookingId)).thenReturn(Optional.of(mock(
+                com.domuspacis.finance.domain.Invoice.class)));
+
+        assertThrows(BusinessRuleViolationException.class,
+                () -> bookingService.deleteBooking(bookingId));
+
+        verify(bookingRepository, never()).delete(any(Booking.class));
+    }
+
+    @Test
+    @DisplayName("deleteBooking - deletes revenue transaction before booking")
+    void deleteBooking_withRevenueTransaction_deletesTransactionFirst() {
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.of(testBooking));
+        when(foodOrderRepository.countByBookingId(bookingId)).thenReturn(0L);
+        when(paymentRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
+        when(invoiceRepository.findByBookingId(bookingId)).thenReturn(Optional.empty());
+
+        RevenueTransaction rt = RevenueTransaction.builder()
+                .sourceType(RevenueSourceType.BOOKING)
+                .sourceId(bookingId)
+                .amount(new BigDecimal("100000"))
+                .build();
+        when(revenueTransactionRepository.findBySourceTypeAndSourceId(
+                RevenueSourceType.BOOKING, bookingId)).thenReturn(Optional.of(rt));
+
+        bookingService.deleteBooking(bookingId);
+
+        verify(revenueTransactionRepository).delete(rt);
+        verify(bookingRepository).delete(testBooking);
+    }
+
+    @Test
+    @DisplayName("deleteBooking - throws exception when booking not found")
+    void deleteBooking_notFound_throwsException() {
+        when(bookingRepository.findById(bookingId)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> bookingService.deleteBooking(bookingId));
+
+        verify(bookingRepository, never()).delete(any(Booking.class));
     }
 
     @Test
