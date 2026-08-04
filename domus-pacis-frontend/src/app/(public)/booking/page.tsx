@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { bookingSchema, BookingFormData } from '@/lib/validation/schemas';
 import { bookingApi } from '@/lib/api/bookingApi';
@@ -25,6 +25,22 @@ const STEPS = [
 ];
 
 export default function BookingPage() {
+  return (
+    <Suspense fallback={<BookingPageFallback />}>
+      <BookingPageInner />
+    </Suspense>
+  );
+}
+
+function BookingPageFallback() {
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent" />
+    </div>
+  );
+}
+
+function BookingPageInner() {
   const searchParams = useSearchParams();
   const assetFromQuery = searchParams.get('asset');
   const typeFromQuery = searchParams.get('type');

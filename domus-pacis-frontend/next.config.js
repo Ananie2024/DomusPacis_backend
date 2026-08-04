@@ -5,7 +5,6 @@ const nextConfig = {
       { protocol: 'http', hostname: 'localhost' },
       { protocol: 'https', hostname: 'domuspacis.rw' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
-      { protocol: 'https', hostname: 'domuspacisbackend-production.up.railway.app' },
       { protocol: 'https', hostname: 'Ananie2024-domuspacis.hf.space' },
     ],
   },
