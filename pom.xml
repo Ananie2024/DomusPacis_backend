@@ -31,6 +31,9 @@
         <db.name>domuspacis</db.name>
         <db.user>root</db.user>
         <db.password></db.password>
+        <db.useSsl>true</db.useSsl>
+        <db.requireSsl>true</db.requireSsl>
+        <db.sslMode>VERIFY_IDENTITY</db.sslMode>
     </properties>
 
     <dependencies>
@@ -195,7 +198,7 @@
                 <artifactId>flyway-maven-plugin</artifactId>
                 <version>10.12.0</version>
                 <configuration>
-                    <url>jdbc:mysql://${db.host}:${db.port}/${db.name}?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;connectTimeout=5000</url>
+                    <url>jdbc:mysql://${db.host}:${db.port}/${db.name}?useSSL=${db.useSsl}&amp;requireSSL=${db.requireSsl}&amp;sslMode=${db.sslMode}&amp;enabledTLSProtocols=TLSv1.2,TLSv1.3&amp;allowPublicKeyRetrieval=true&amp;connectTimeout=5000</url>
                     <user>${db.user}</user>
                     <password>${db.password}</password>
                     <locations>

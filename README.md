@@ -33,6 +33,16 @@ CORS_ORIGINS=https://your-frontend.example.com
 PORT=8080
 ```
 
+SSL/TLS variables (defaults are production-safe for TiDB Cloud Serverless):
+
+```bash
+DB_USE_SSL=true          # Enable TLS (required by TiDB Cloud Serverless)
+DB_REQUIRE_SSL=true      # Reject non-TLS connections
+DB_SSL_MODE=VERIFY_IDENTITY  # VERIFY_IDENTITY | VERIFY_CA | PREFERRED | REQUIRED
+```
+
+For local MySQL development, set `DB_USE_SSL=false` and `DB_REQUIRE_SSL=false`, or use the `local` Spring profile (`application-local.yml`).
+
 Frontend runtime variables:
 
 ```bash
