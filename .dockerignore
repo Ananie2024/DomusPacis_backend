@@ -1,0 +1,10 @@
+.git
+.gitignore
+.idea
+.vscode
+target/
+domus-pacis-frontend/node_modules/
+domus-pacis-frontend/.next/
+*.tmp
+*.log
+.env.local

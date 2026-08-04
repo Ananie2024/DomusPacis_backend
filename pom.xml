@@ -26,6 +26,11 @@
         <springdoc.version>2.6.0</springdoc.version>
         <testcontainers.version>1.20.1</testcontainers.version>
         <logstash.version>8.0</logstash.version>
+        <db.host>127.0.0.1</db.host>
+        <db.port>3306</db.port>
+        <db.name>domuspacis</db.name>
+        <db.user>root</db.user>
+        <db.password></db.password>
     </properties>
 
     <dependencies>
@@ -186,6 +191,19 @@
     <build>
         <plugins>
             <plugin>
+                <groupId>org.flywaydb</groupId>
+                <artifactId>flyway-maven-plugin</artifactId>
+                <version>10.12.0</version>
+                <configuration>
+                    <url>jdbc:mysql://${db.host}:${db.port}/${db.name}?useSSL=false&amp;allowPublicKeyRetrieval=true&amp;connectTimeout=5000</url>
+                    <user>${db.user}</user>
+                    <password>${db.password}</password>
+                    <locations>
+                        <location>filesystem:src/main/resources/db/migration</location>
+                    </locations>
+                </configuration>
+            </plugin>
+            <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
@@ -213,6 +231,11 @@
                             <groupId>org.mapstruct</groupId>
                             <artifactId>mapstruct-processor</artifactId>
                             <version>${mapstruct.version}</version>
+                        </path>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok-mapstruct-binding</artifactId>
+                            <version>0.2.0</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>

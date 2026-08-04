@@ -12,9 +12,27 @@
 -- This migration is idempotent: IF NOT EXISTS prevents errors on
 -- databases where the old V5 already created these columns.
 
-ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS failed_login_attempts INT NOT NULL DEFAULT 0,
-    ADD COLUMN IF NOT EXISTS locked_until DATETIME(6) NULL;
+-- Idempotent column addition compatible with MySQL 8.x and MariaDB
+DROP PROCEDURE IF EXISTS add_login_lockout_columns;
+DELIMITER //
+CREATE PROCEDURE add_login_lockout_columns()
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'failed_login_attempts' AND table_schema = DATABASE()
+    ) THEN
+        ALTER TABLE users ADD COLUMN failed_login_attempts INT NOT NULL DEFAULT 0;
+    END IF;
 
--- Existing rows default to 0 failed attempts and no lockout.
--- The application sets these values at runtime.
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'locked_until' AND table_schema = DATABASE()
+    ) THEN
+        ALTER TABLE users ADD COLUMN locked_until DATETIME(6) NULL;
+    END IF;
+END //
+DELIMITER ;
+
+CALL add_login_lockout_columns();
+DROP PROCEDURE IF EXISTS add_login_lockout_columns;
+

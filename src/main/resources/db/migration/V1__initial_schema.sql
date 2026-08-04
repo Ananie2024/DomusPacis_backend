@@ -154,6 +154,39 @@ CREATE TABLE bookings (
     FOREIGN KEY (service_asset_id) REFERENCES service_assets(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ── Staff Roles & Employees ────────────────────────────────────
+CREATE TABLE employee_roles (
+    id                  VARCHAR(36)     NOT NULL PRIMARY KEY,
+    title                VARCHAR(100)    NOT NULL,
+    description          TEXT,
+    created_at           DATETIME(6)     NOT NULL,
+    updated_at           DATETIME(6)     NOT NULL,
+    INDEX idx_emp_role_title (title)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE employees (
+    id                  VARCHAR(36)     NOT NULL PRIMARY KEY,
+    user_id              VARCHAR(36),
+    full_name            VARCHAR(255)    NOT NULL,
+    national_id          VARCHAR(50),
+    phone                VARCHAR(50),
+    role_id              VARCHAR(36),
+    department           VARCHAR(100),
+    contract_type        VARCHAR(20)     NOT NULL,
+    hire_date            DATE,
+    base_salary          DECIMAL(12,2),
+    bank_account         VARCHAR(100),
+    is_active            BOOLEAN         NOT NULL DEFAULT TRUE,
+    created_at           DATETIME(6)     NOT NULL,
+    updated_at           DATETIME(6)     NOT NULL,
+    INDEX idx_emp_user (user_id),
+    INDEX idx_emp_dept (department),
+    INDEX idx_emp_contract (contract_type),
+    INDEX idx_emp_national (national_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (role_id) REFERENCES employee_roles(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ── Inventory ────────────────────────────────────────────────
 CREATE TABLE suppliers (
     id                      VARCHAR(36)     NOT NULL PRIMARY KEY,
@@ -380,37 +413,6 @@ CREATE TABLE tax_rule_configs (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ── Staff ────────────────────────────────────────────────────
-CREATE TABLE employees (
-    id                  VARCHAR(36)     NOT NULL PRIMARY KEY,
-    user_id              VARCHAR(36),
-    full_name            VARCHAR(255)    NOT NULL,
-    national_id          VARCHAR(50),
-    phone                VARCHAR(50),
-    role_id              VARCHAR(36),
-    department           VARCHAR(100),
-    contract_type        VARCHAR(20)     NOT NULL,
-    hire_date            DATE,
-    base_salary          DECIMAL(12,2),
-    bank_account         VARCHAR(100),
-    is_active            BOOLEAN         NOT NULL DEFAULT TRUE,
-    created_at           DATETIME(6)     NOT NULL,
-    updated_at           DATETIME(6)     NOT NULL,
-    INDEX idx_emp_user (user_id),
-    INDEX idx_emp_dept (department),
-    INDEX idx_emp_contract (contract_type),
-    INDEX idx_emp_national (national_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
-    FOREIGN KEY (role_id) REFERENCES employee_roles(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE TABLE employee_roles (
-    id                  VARCHAR(36)     NOT NULL PRIMARY KEY,
-    title                VARCHAR(100)    NOT NULL,
-    description          TEXT,
-    created_at           DATETIME(6)     NOT NULL,
-    updated_at           DATETIME(6)     NOT NULL,
-    INDEX idx_emp_role_title (title)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE employee_role_permissions (
     role_id              VARCHAR(36)     NOT NULL,
