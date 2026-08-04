@@ -43,6 +43,11 @@ DB_SSL_MODE=VERIFY_IDENTITY  # VERIFY_IDENTITY | VERIFY_CA | PREFERRED | REQUIRE
 
 For local MySQL development, set `DB_USE_SSL=false` and `DB_REQUIRE_SSL=false`, or use the `local` Spring profile (`application-local.yml`).
 
+**TiDB / Flyway compatibility note:** The production database is TiDB Cloud Serverless, which does **not** support the `CREATE TABLE ... SELECT` (CTAS) syntax that Flyway uses when baselining a schema. Therefore `flyway.baseline-on-migrate` is **disabled** by default; migrations V1–V9 create the full schema from scratch. If you need to adopt an existing pre-Flyway database, enable the baseline explicitly in that environment only:
+```bash
+SPRING_FLYWAY_BASELINE-ON-MIGRATE=true
+```
+
 Frontend runtime variables:
 
 ```bash
