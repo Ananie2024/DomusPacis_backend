@@ -1,3 +1,11 @@
+---
+title: Domus Pacis Backend
+emoji: 🏨
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+---
 # Domus Pacis Platform
 
 Full-stack hospitality management platform for Domus Pacis, with a Spring Boot API and a Next.js admin/public frontend.
