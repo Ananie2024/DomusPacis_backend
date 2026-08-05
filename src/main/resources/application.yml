@@ -72,19 +72,19 @@ spring:
       org.apache.catalina: WARN
       org.apache.tomcat: WARN
   
-  jwt:
-    secret: ${JWT_SECRET:domuspacis_secure_default_jwt_secret_key_2026_at_least_32_bytes_long!}
-    expiration: 86400000
-    refresh-expiration: 604800000
-  
-  app:
-    cors:
-      allowed-origins: ${CORS_ORIGINS:*}
-      trust-proxy-headers: false
-      rate-limit:
-        login:
-          max-requests-per-minute: 5
-          max-failed-attempts: 5
-          lockout-duration-minutes: 15
-        password-reset:
-          max-requests-per-minute: 3
+jwt:
+  secret: ${JWT_SECRET:domuspacis_secure_default_jwt_secret_key_2026_at_least_32_bytes_long!}
+  expiration: 86400000
+  refresh-expiration: 604800000
+
+app:
+  cors:
+    allowed-origins: ${CORS_ORIGINS:*}
+    trust-proxy-headers: false
+    rate-limit:
+      login:
+        max-requests-per-minute: 5
+        max-failed-attempts: 5
+        lockout-duration-minutes: 15
+      password-reset:
+        max-requests-per-minute: 3
