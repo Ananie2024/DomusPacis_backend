@@ -3,7 +3,7 @@ spring:
     name: domuspacis-platform
   
   datasource:
-    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:domuspacis}?useSSL=${DB_USE_SSL:true}&requireSSL=${DB_REQUIRE_SSL:true}&sslMode=${DB_SSL_MODE:VERIFY_IDENTITY}&enabledTLSProtocols=TLSv1.2,TLSv1.3&allowPublicKeyRetrieval=true&connectTimeout=5000&zeroDateTimeBehavior=CONVERT_TO_NULL&createDatabaseIfNotExist=true
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:domuspacis}?useSSL=${DB_USE_SSL:true}&requireSSL=${DB_REQUIRE_SSL:true}&sslMode=${DB_SSL_MODE:VERIFY_IDENTITY}&enabledTLSProtocols=TLSv1.2,TLSv1.3&allowPublicKeyRetrieval=true&connectTimeout=5000&zeroDateTimeBehavior=CONVERT_TO_NULL
     username: ${MYSQLUSER:root}
     password: ${MYSQLPASSWORD:}
     driver-class-name: com.mysql.cj.jdbc.Driver
@@ -33,9 +33,10 @@ spring:
           preferred_uuid_jdbc_type: VARCHAR
 
   flyway:
-    enabled: ${FLYWAY_ENABLED:true}
+    enabled: ${FLYWAY_ENABLED:false}
     locations: classpath:db/migration
-    baseline-on-migrate: false
+    baseline-on-migrate: true
+    baseline-version: ${FLYWAY_BASELINE_VERSION:9}
     clean-disabled: true
   
   mail:
