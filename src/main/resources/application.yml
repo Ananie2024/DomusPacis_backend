@@ -38,6 +38,10 @@ spring:
     baseline-on-migrate: true
     baseline-version: ${FLYWAY_BASELINE_VERSION:9}
     clean-disabled: true
+
+  sql:
+    init:
+      mode: never
   
   mail:
     host: smtp.gmail.com
