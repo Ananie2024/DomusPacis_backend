@@ -72,7 +72,7 @@ public class JwtService {
     }
 
     private void embedPasswordChangedAt(Map<String, Object> claims, UserDetails userDetails) {
-        if (userDetails instanceof User user) {
+        if (userDetails instanceof User user && user.getPasswordChangedAt() != null) {
             claims.put(CLAIM_PASSWORD_CHANGED_AT, user.getPasswordChangedAt().toEpochMilli());
         } else {
             claims.put(CLAIM_PASSWORD_CHANGED_AT, Instant.now().toEpochMilli());
@@ -129,7 +129,7 @@ public class JwtService {
 
             // Validate password_changed_at — reject tokens issued before the last password change
             Long tokenPca = claims.get(CLAIM_PASSWORD_CHANGED_AT, Long.class);
-            if (tokenPca != null && userDetails instanceof User user) {
+            if (tokenPca != null && userDetails instanceof User user && user.getPasswordChangedAt() != null) {
                 long dbPca = user.getPasswordChangedAt().toEpochMilli();
                 if (dbPca > tokenPca) {
                     log.warn("Token rejected: password changed after token issuance for user {}", username);
