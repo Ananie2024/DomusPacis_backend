@@ -10,7 +10,7 @@ import java.util.List;
 public class EmployeeRole extends BaseEntity {
     @Column(name = "title", nullable = false, length = 100) private String title;
     @Column(name = "description", columnDefinition = "TEXT") private String description;
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "employee_role_permissions", joinColumns = @JoinColumn(name = "role_id"))
     @Column(name = "permission") @Builder.Default private List<String> permissions = new ArrayList<>();
 }

@@ -15,6 +15,6 @@ public class WorkSchedule extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "employee_id", nullable = false) private Employee employee;
     @Column(name = "week_start_date", nullable = false) private LocalDate weekStartDate;
-    @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "schedule", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @Builder.Default private List<Shift> shifts = new ArrayList<>();
 }

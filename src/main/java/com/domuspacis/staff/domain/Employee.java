@@ -19,7 +19,7 @@ public class Employee extends BaseEntity {
     @Column(name = "full_name", nullable = false, length = 255) private String fullName;
     @Column(name = "national_id", length = 50) private String nationalId;
     @Column(name = "phone", length = 50) private String phone;
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id") private EmployeeRole role;
     @Column(name = "department", length = 100) private String department;
     @Enumerated(EnumType.STRING)
