@@ -1,7 +1,7 @@
 spring:
   application:
     name: domuspacis-platform
-
+  
   datasource:
     url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3306}/${DB_NAME:domuspacis}?useSSL=${DB_USE_SSL:true}&requireSSL=${DB_REQUIRE_SSL:true}&sslMode=${DB_SSL_MODE:VERIFY_IDENTITY}&enabledTLSProtocols=TLSv1.2,TLSv1.3&allowPublicKeyRetrieval=true&connectTimeout=5000
     username: ${MYSQLUSER:root}
@@ -13,11 +13,11 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
-
+  
   mvc:
     pathmatch:
       use-suffix-pattern: false
-
+  
   jpa:
     hibernate:
       ddl-auto: validate
@@ -31,19 +31,14 @@ spring:
           order_updates: true
         type:
           preferred_uuid_jdbc_type: VARCHAR
-
+  
   flyway:
     enabled: true
-    # baseline-on-migrate is deliberately omitted (defaults to false):
-    # The production database (TiDB Cloud Serverless) does not support the
-    # `CREATE TABLE ... SELECT` (CTAS) syntax that Flyway uses when baselining
-    # a fresh schema. Because migrations V1-V9 create the full schema from
-    # scratch, no baseline is needed. If an existing pre-Flyway database must
-    # be adopted, enable it explicitly via:
-    #   SPRING_FLYWAY_BASELINE-ON-MIGRATE=true
     locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: ${FLYWAY_BASELINE_VERSION:9}
     clean-disabled: true
-
+  
   mail:
     host: smtp.gmail.com
     port: 587
@@ -55,42 +50,41 @@ spring:
           auth: true
           starttls:
             enable: true
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-
-server:
-  port: ${PORT:8080}
-
-logging:
-  level:
-    root: WARN
-    com.domuspacis: INFO
-    org.springframework: ERROR
-    org.springframework.web: WARN
-    org.hibernate: ERROR
-    com.zaxxer.hikari: WARN
-    org.springframework.security: WARN
-    org.apache.catalina: WARN
-    org.apache.tomcat: WARN
-
-jwt:
-  secret: ${JWT_SECRET:domuspacis_secure_default_jwt_secret_key_2026_at_least_32_bytes_long!}
-  expiration: 86400000
-  refresh-expiration: 604800000
-
-app:
-  cors:
-    allowed-origins: ${CORS_ORIGINS:*}
-  trust-proxy-headers: false
-  rate-limit:
-    login:
-      max-requests-per-minute: 5
-      max-failed-attempts: 5
-      lockout-duration-minutes: 15
-    password-reset:
-      max-requests-per-minute: 3
-
+  
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: health,info
+  
+  server:
+    port: ${PORT:8080}
+  
+  logging:
+    level:
+      root: WARN
+      com.domuspacis: INFO
+      org.springframework: ERROR
+      org.springframework.web: WARN
+      org.hibernate: ERROR
+      com.zaxxer.hikari: WARN
+      org.springframework.security: WARN
+      org.apache.catalina: WARN
+      org.apache.tomcat: WARN
+  
+  jwt:
+    secret: ${JWT_SECRET:domuspacis_secure_default_jwt_secret_key_2026_at_least_32_bytes_long!}
+    expiration: 86400000
+    refresh-expiration: 604800000
+  
+  app:
+    cors:
+      allowed-origins: ${CORS_ORIGINS:*}
+      trust-proxy-headers: false
+      rate-limit:
+        login:
+          max-requests-per-minute: 5
+          max-failed-attempts: 5
+          lockout-duration-minutes: 15
+        password-reset:
+          max-requests-per-minute: 3
