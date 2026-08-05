@@ -33,7 +33,7 @@ spring:
           preferred_uuid_jdbc_type: VARCHAR
   
   flyway:
-    enabled: true
+    enabled: ${FLYWAY_ENABLED:false}
     locations: classpath:db/migration
     baseline-on-migrate: true
     baseline-version: ${FLYWAY_BASELINE_VERSION:9}
