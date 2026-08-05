@@ -12,7 +12,9 @@ const nextConfig = {
   // Proxy /api/v1/* requests to the backend so the browser never makes
   // a cross-origin call — this eliminates CORS "Network Error" issues.
   async rewrites() {
-    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://Ananie2024-domuspacis.hf.space/api/v1';
+    // NOTE: NEXT_PUBLIC_API_URL must be the base URL WITHOUT /api/v1.
+    // e.g. https://Ananie2024-domuspacis.hf.space
+    const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'https://Ananie2024-domuspacis.hf.space';
     return [
       {
         source: '/api/v1/:path*',
