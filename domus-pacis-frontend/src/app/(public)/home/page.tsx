@@ -248,6 +248,19 @@ export default async function HomePage() {
             Contact Us
           </Link>
         </div>
+
+        {/* Staff / Admin login */}
+        <div className="mt-10">
+          <Link
+            href="/login"
+            className="text-sm text-stone-500 hover:text-blue-700 underline underline-offset-2 transition-colors"
+          >
+            Administrative Staff Login
+          </Link>
+          <p className="text-xs text-stone-400 mt-1.5">
+            The admin portal is reserved for administrative staff only.
+          </p>
+        </div>
       </section>
     </>
   );
